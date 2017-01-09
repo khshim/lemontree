@@ -1,5 +1,5 @@
 # LemonTree
-Simple, Flexible, Configurable Deep Learning Package based on Theano
+Simple, Flexible, Configurable Deep Learning Package based on Theano.
 
 ## Introduction
 LemonTree is a deep learning package based on [Theano](http://theano.readthedocs.io/en/latest/index.html).
@@ -11,16 +11,23 @@ LemonTree is under MIT license.
 Backward Compatibility is not yet supported.
 Please use Python >= 3.4.
 These packages below are required for LemonTree.
+
 1. Numpy
+
 2. Scipy
+
 3. Theano
+
 4. (BLAS, CUDA cuDNN for fast computation)
 
 
 ## Goal (Not yet accomplished)
 These are unique goals that other Theano-based packages do not focus much.
+
 1. Data parallel training
+
 2. Fixed point optimization
+
 3. Very good visualization (data, result, structure)
 
 ## Contact

@@ -253,8 +253,13 @@ paket-files/
 
 # misc
 *.pyc
-__pycache__
 *.npy
 *.pyproj
 *.sln
-.vs
+
+.vs/
+__pycache__/
+lemontree.egg-info
+*.egg-info/
+build/
+dist/
