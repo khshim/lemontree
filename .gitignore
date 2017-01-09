@@ -250,3 +250,11 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+# misc
+*.pyc
+__pycache__
+*.npy
+*.pyproj
+*.sln
+.vs
