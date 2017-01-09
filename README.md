@@ -3,8 +3,11 @@ Simple, Flexible, Configurable Deep Learning Package based on Theano.
 
 ## Introduction
 LemonTree is a deep learning package based on [Theano](http://theano.readthedocs.io/en/latest/index.html).
+
 LemonTree is developed for various deep learning experiments & researches.
+
 LemonTree is very young, and under active development.
+
 LemonTree is under MIT license.
 
 ## Requirements (Minimal)
@@ -31,7 +34,8 @@ These are unique goals that other Theano-based packages do not focus much.
 3. Very good visualization (data, result, structure)
 
 ## Contact
-Please contact below if you have **any** questions.
-Welcome!
+Please contact below if you have **any** questions. Welcome!
+
 Author: Kyuhong Shim @ Seoul National University
+
 E-mail: skhu20@snu.ac.kr
