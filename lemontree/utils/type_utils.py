@@ -22,7 +22,6 @@ def merge_dicts(dicts):
     -------
     Ordereddict
         an Ordereddict which contains all key-value pairs in input dictionaries.
-
     """
     # check asserts
     assert isinstance(dicts, list), '"dicts" should be a list type.'

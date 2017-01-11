@@ -24,7 +24,6 @@ def get_inputs_of_variables(variables):
     -------
     list
         a list of required inputs to compute the variable.
-
     """
     # assert
     assert isinstance(variables, list), 'Variables should be a list of tensor variable(s).'

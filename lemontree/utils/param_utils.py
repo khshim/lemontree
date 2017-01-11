@@ -24,7 +24,6 @@ def filter_params_by_tags(params, include_tags, exclude_tags=None):
     -------
     list
         a list of filtered (shared variable) parameters.
-
     """
     # check asserts
     assert isinstance(params, list), '"params" should be a list type.'
@@ -60,7 +59,6 @@ def print_tags_in_params(params):
     -------
     set
         a set of sorted (string) tags.
-
     """
     # check asserts
     assert isinstance(params, list), '"params" should be a list type.'

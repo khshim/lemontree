@@ -24,7 +24,6 @@ def split_data(input, rule=0.9):
     -------
     tuple
         a tuple of two splitted parts.
-
     """
     # check asserts
     assert 0 < rule, 'Rule should be a positive value.'
