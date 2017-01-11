@@ -1,4 +1,12 @@
-site_name: LemonTree
+site_name: LemonTree Documentation
+theme: readthedocs
+repo_url: http://github.com/khshim/LemonTree
+site_url: http://lemontree.readthedocs.io/
+
 pages:
     - Home: index.md
-theme: readthedocs
+    - Utils:
+        - Data Utils: utils/data_utils.md
+        - Graph Utils: utils/graph_utils.md
+        - Parameter Utils: utils/param_utils.md
+        - Type Utils: utils/type_utils.md
