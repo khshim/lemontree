@@ -18,5 +18,3 @@ setup(name='lemontree',
       setup_requires=['theano'],
       install_requires=['theano'],
       )
-
-

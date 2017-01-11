@@ -263,3 +263,4 @@ lemontree.egg-info
 *.egg-info/
 build/
 dist/
+site/

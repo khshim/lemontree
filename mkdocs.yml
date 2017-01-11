@@ -1,0 +1,4 @@
+site_name: LemonTree
+pages:
+    - Home: index.md
+theme: readthedocs
