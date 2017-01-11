@@ -1,5 +1,6 @@
 site_name: LemonTree Documentation
 theme: readthedocs
+docs_dir: docs
 repo_url: http://github.com/khshim/LemonTree
 site_url: http://lemontree.readthedocs.io/
 
