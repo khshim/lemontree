@@ -30,16 +30,16 @@ class BaseLayer(object):
         # set members
         self.name = name
 
-    def get_output(self, income):
+    def get_output(self, input_):
         """
         This function creates symbolic function to compute output from an input.
         Basically, each layer has only one input.
 
         Parameters
         ----------
-        income: TensorVariable
+        input_: TensorVariable
             a TensorVariable to compute the output.
-            name 'input' is pre-defined, so we use 'income' instead.
+            name 'input' is pre-defined, so we use 'input_' instead.
 
         Returns
         -------
@@ -68,7 +68,8 @@ class BaseLayer(object):
 
     def get_updates(self):
         """
-        This function returns internal updates for each mini-batch training (or not).
+        This function returns internal updates.
+        Updates are applied for each mini-batch training (or not).
         Layer updates can be merged with optimizer updates by "merge_dicts" function.
 
         Parameters
@@ -96,7 +97,7 @@ class BaseRecurrentLayer(BaseLayer):
         if unroll and gradient_steps <= 0:
             raise ValueError('Network Unroll requires exact gradient step')
 
-    def get_output(self, income, masks, hidden_init):
+    def get_output(self, input_, masks, hidden_init):
         raise NotImplementedError('Abstract class method')
 
     def get_params(self):  # Trained by optimizers

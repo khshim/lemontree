@@ -21,6 +21,7 @@ class ReLU(BaseLayer):
         ----------
         alpha: float
             a positive float value which indicates the tangent of x < 0 range.
+            if alpha is not 0, this function become a leaky ReLU.
         name: string
             a string name of this class.
 
@@ -28,29 +29,64 @@ class ReLU(BaseLayer):
         -------
         None.
         """
+        super(ReLU, self).__init__(name)
         # check asserts
         assert alpha > 0, '"alpha" should be a positive float value.'
 
         # set members
-        self.alpha = alpha
-        super(ReLU, self).__init__(name)
+        self.alpha = alpha        
 
-    def get_output(self, input_,):
+    def get_output(self, input_):
         """
         This function overrides the parents' one.
         Creates symbolic function to compute output from an input.
+        ReLU is element-wise operation.
+
+        Math Expression
+        -------------------
+        y = maximum(x, 0)
+        y = ifelse(x > 0, x, \alpha * x)
 
         Parameters
         ----------
         input_: TensorVariable
-            a TensorVariable 
+
+        Returns
+        -------
+        TensorVariable
         """
         return T.nnet.relu(input_, self.alpha)
 
     def get_params(self):
+        """
+        This function overrides the parents' one.
+        Returns interal layer parameters.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        list
+            an empty list for consistency.
+        """
         return []
 
     def get_updates(self):
+        """
+        This function overrides the parents' one.
+        Returns internal updates.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        OrderedDict
+            an empty dictionary for consistency.
+        """
         return OrderedDict()
 
 

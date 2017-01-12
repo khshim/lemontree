@@ -4,6 +4,7 @@ Most function use parameter tags.
 """
 
 import numpy as np
+import theano
 
 
 def filter_params_by_tags(params, include_tags, exclude_tags=None):
@@ -46,6 +47,32 @@ def filter_params_by_tags(params, include_tags, exclude_tags=None):
         if flag:
             return_list.append(pp)
     return return_list
+
+
+def fill_params_by_value(params, value):
+    """
+    This function fill parameters with given single value.
+    Usually used to reset internal parameters.
+    You can use "Constant" initializer instead.
+
+    Parameters
+    ----------
+    params: list
+        a list of (shared variable) parameters.
+    value: float
+        a float value to fill the parameters.
+
+    Returns
+    -------
+    None.
+    """
+    # check asserts
+    assert isinstance(params, list), '"params" should be a list type.'
+
+    for pp in params:
+        pp_value = pp.get_value(borrow=True)
+        pp_value_new = np.ones(pp_value.shape, dtype=theano.config.floatX) * value  # same tensor with constant value
+        pp.set_value(np.asarray(pp_value_new, dtype=theano.config.floatX))
 
 
 def print_tags_in_params(params, printing=False):
