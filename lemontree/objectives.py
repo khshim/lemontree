@@ -39,7 +39,7 @@ class CategoricalCrossentropy(BaseObjective):
 
         Parameters
         ----------
-        stabilize: {True, False}, default: False
+        stabilize: bool, default: False
             a bool value to use stabilization or not.
             if yes, predictions are clipped to small, nonnegative values to prevent NaNs.
             the prediction slightly ignores the probability distribution assumtion of sum = 1.
@@ -55,7 +55,7 @@ class CategoricalCrossentropy(BaseObjective):
         None.
         """
         # check assert
-        assert stabilize in [True, False], '"stabilize" should be either True or False.'
+        assert isinstance(stabilize, bool), '"stabilize" should be a bool value.'
         assert mode in ['mean', 'sum'], '"mode" should be either "mean" or "sum".'
 
         # set members
@@ -238,10 +238,8 @@ class L1norm(BaseObjective):
         # check asserts
         assert isinstance(params, list), '"params" should be a list type.'
         # do
-        sum = T.zeros((1,))
-        for pp in params:
-            sum += T.sum(T.abs_(pp))
-        return sum
+        loss_sum = sum([T.sum(T.abs_(pp)) for pp in params])
+        return loss_sum
 
 
 class L2norm(BaseObjective):
@@ -279,7 +277,5 @@ class L2norm(BaseObjective):
         # check asserts
         assert isinstance(params, list), '"params" should be a list type.'
         # do
-        sum = T.zeros((1,))
-        for pp in params:
-            sum += T.sum(T.square(pp))
-        return sum
+        loss_sum = sum([T.sum(T.square(pp)) for pp in params])
+        return loss_sum

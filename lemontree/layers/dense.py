@@ -4,7 +4,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 from collections import OrderedDict
-from .layer import BaseLayer
+from lemontree.layers.layer import BaseLayer
 
 
 class DenseLayer(BaseLayer):
@@ -21,17 +21,17 @@ class DenseLayer(BaseLayer):
         self.b = theano.shared(b, self.name + '_bias')
         self.b.tag = 'bias'
 
-    def _compute_output(self, inputs):
+    def get_output(self, input):
         if self.use_bias:
-            return T.dot(inputs, self.W) + self.b
+            return T.dot(input, self.W) + self.b
         else:
-            return T.dot(inputs, self.W)
+            return T.dot(input, self.W)
 
-    def _collect_params(self):
+    def get_params(self):
         if self.use_bias:
             return [self.W, self.b]
         else:
             return [self.W]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()

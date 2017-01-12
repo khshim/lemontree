@@ -4,7 +4,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 from collections import OrderedDict
-from .layer import BaseLayer
+from lemontree.layers.layer import BaseLayer
 
 
 class Convolution2DLayer(BaseLayer):
@@ -30,9 +30,9 @@ class Convolution2DLayer(BaseLayer):
         self.b = theano.shared(b, self.name + '_bias')
         self.b.tag = 'bias'
 
-    def _compute_output(self, inputs):
-        # assert len(inputs.shape) == 4
-        result = T.nnet.conv2d(inputs,
+    def get_output(self, input):
+        # assert len(input.shape) == 4
+        result = T.nnet.conv2d(input,
                                filters=self.W,
                                input_shape=(None,) + self.input_shape,
                                filter_shape=(self.output_shape[0], self.input_shape[0], self.kernel_shape[0], self.kernel_shape[1]),
@@ -44,13 +44,13 @@ class Convolution2DLayer(BaseLayer):
         else:
             return result
 
-    def _collect_params(self):
+    def get_params(self):
         if self.use_bias:
             return [self.W, self.b]
         else:
             return [self.W]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()
 
 
@@ -65,19 +65,19 @@ class Padding2DLayer(BaseLayer):
         assert len(self.output_shape) == 3
         assert len(self.padding) == 4
 
-    def _compute_output(self, inputs):
-        # assert len(inputs.shape) == 4
-        shape = (inputs.shape[0],) + (self.input_shape[0], self.input_shape[1] + self.padding[0] + self.padding[1], self.input_shape[2] + self.padding[2] + self.padding[3])
+    def get_output(self, input):
+        # assert len(input.shape) == 4
+        shape = (input.shape[0],) + (self.input_shape[0], self.input_shape[1] + self.padding[0] + self.padding[1], self.input_shape[2] + self.padding[2] + self.padding[3])
         result = T.zeros(shape, dtype=theano.config.floatX)
         indices = (slice(None),
                    slice(None),
                    slice(self.padding[0], self.input_shape[1] + self.padding[0]),
                    slice(self.padding[2], self.input_shape[2] + self.padding[2])
                    )
-        return T.set_subtensor(result[indices], inputs)
+        return T.set_subtensor(result[indices], input)
 
-    def _collect_params(self):
+    def get_params(self):
         return []
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()

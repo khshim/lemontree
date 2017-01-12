@@ -5,7 +5,7 @@ import theano
 import theano.tensor as T
 from collections import OrderedDict
 from theano.sandbox.rng_mrg import MRG_RandomStreams as MRG
-from .layer import BaseLayer
+from lemontree.layers.layer import BaseLayer
 
 
 class DropoutLayer(BaseLayer):
@@ -21,18 +21,18 @@ class DropoutLayer(BaseLayer):
     def change_flag(self, new_flag):
         self.flag.set_value(float(new_flag))
 
-    def _compute_output(self, inputs):
+    def get_output(self, input):
         if self.rescale is True:
             coeff = 1 / (1 - self.drop_probability)
         else:
             coeff = 1
-        mask = self.rng.binomial(inputs.shape, p=1 - self.drop_probability, dtype=inputs.dtype)
+        mask = self.rng.binomial(input.shape, p=1 - self.drop_probability, dtype=input.dtype)
         return T.switch(T.gt(self.flag, 0),
-                        inputs * mask * coeff,
-                        inputs)
+                        input * mask * coeff,
+                        input)
 
-    def _collect_params(self):
+    def get_params(self):
         return []
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()

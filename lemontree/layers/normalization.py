@@ -4,7 +4,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 from collections import OrderedDict
-from .layer import BaseLayer
+from lemontree.layers.layer import BaseLayer
 
 
 class BatchNormalization1DLayer(BaseLayer):
@@ -32,19 +32,19 @@ class BatchNormalization1DLayer(BaseLayer):
     def change_flag(self, new_flag):
         self.flag.set_value(float(new_flag))
 
-    def _compute_output(self, inputs):
-        batch_mean = T.mean(inputs, axis=0)
-        batch_std = T.std(inputs, axis=0)
+    def get_output(self, input):
+        batch_mean = T.mean(input, axis=0)
+        batch_std = T.std(input, axis=0)
         self.updates[self.bn_mean] = self.bn_mean * self.momentum + batch_mean * (1 - self.momentum)
         self.updates[self.bn_std] = self.bn_std * self.momentum + batch_std * (1 - self.momentum)
         return T.switch(T.gt(self.flag, 0),
-                        T.nnet.batch_normalization(inputs, self.gamma, self.beta, batch_mean, batch_std),
-                        T.nnet.batch_normalization(inputs, self.gamma, self.beta, self.bn_mean, self.bn_std))
+                        T.nnet.batch_normalization(input, self.gamma, self.beta, batch_mean, batch_std),
+                        T.nnet.batch_normalization(input, self.gamma, self.beta, self.bn_mean, self.bn_std))
 
-    def _collect_params(self):
+    def get_params(self):
         return [self.gamma, self.beta, self.bn_mean, self.bn_std]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return self.updates
 
 
@@ -74,21 +74,21 @@ class BatchNormalization2DLayer(BaseLayer):
     def change_flag(self, new_flag):
         self.flag.set_value(float(new_flag))
 
-    def _compute_output(self, inputs):
-        batch_mean = T.mean(inputs, axis=[0, 2, 3])
-        batch_std = T.std(inputs, axis=[0, 2, 3])
+    def get_output(self, input):
+        batch_mean = T.mean(input, axis=[0, 2, 3])
+        batch_std = T.std(input, axis=[0, 2, 3])
         self.updates[self.bn_mean] = self.bn_mean * self.momentum + batch_mean * (1 - self.momentum)
         self.updates[self.bn_std] = self.bn_std * self.momentum + batch_std * (1 - self.momentum)
         return T.switch(T.gt(self.flag, 0),
-                        T.nnet.batch_normalization(inputs, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
+                        T.nnet.batch_normalization(input, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
                         batch_mean.dimshuffle('x', 0, 'x', 'x'), batch_std.dimshuffle('x', 0, 'x', 'x')),
-                        T.nnet.batch_normalization(inputs, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
+                        T.nnet.batch_normalization(input, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
                         self.bn_mean.dimshuffle('x', 0, 'x', 'x'), self.bn_std.dimshuffle('x', 0, 'x', 'x')))
 
-    def _collect_params(self):
+    def get_params(self):
         return [self.gamma, self.beta, self.bn_mean, self.bn_std]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return self.updates
 
 
@@ -105,15 +105,15 @@ class LayerNormalization1DLayer(BaseLayer):
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tag = 'beta'
 
-    def _compute_output(self, inputs):
-        dim_mean = T.mean(inputs, axis=1)
-        dim_std = T.std(inputs, axis=1)
-        return self.gamma * (inputs - dim_mean.dimshuffle(0, 'x')) / (dim_std.dimshuffle(0, 'x') + 1e-8) + self.beta
+    def get_output(self, input):
+        dim_mean = T.mean(input, axis=1)
+        dim_std = T.std(input, axis=1)
+        return self.gamma * (input - dim_mean.dimshuffle(0, 'x')) / (dim_std.dimshuffle(0, 'x') + 1e-8) + self.beta
 
-    def _collect_params(self):
+    def get_params(self):
         return [self.gamma, self.beta]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()
 
 
@@ -131,13 +131,13 @@ class LayerNormalization2DLayer(BaseLayer):
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tag = 'beta'
 
-    def _compute_output(self, inputs):
-        dim_mean = T.mean(inputs, axis=[1, 2, 3])
-        dim_std = T.std(inputs, axis=[1, 2, 3])
-        return self.gamma.dimshuffle('x', 0, 'x', 'x') * (inputs - dim_mean.dimshuffle(0, 'x', 'x', 'x')) / (dim_std.dimshuffle(0, 'x', 'x', 'x') + 1e-8) + self.beta.dimshuffle('x', 0, 'x', 'x')
+    def get_output(self, input):
+        dim_mean = T.mean(input, axis=[1, 2, 3])
+        dim_std = T.std(input, axis=[1, 2, 3])
+        return self.gamma.dimshuffle('x', 0, 'x', 'x') * (input - dim_mean.dimshuffle(0, 'x', 'x', 'x')) / (dim_std.dimshuffle(0, 'x', 'x', 'x') + 1e-8) + self.beta.dimshuffle('x', 0, 'x', 'x')
 
-    def _collect_params(self):
+    def get_params(self):
         return [self.gamma, self.beta]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()

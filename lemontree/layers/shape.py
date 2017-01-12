@@ -3,9 +3,8 @@
 import numpy as np
 import theano
 import theano.tensor as T
-from theano.tensor.signal.pool import pool_2d
 from collections import OrderedDict
-from .layer import BaseLayer
+from lemontree.layers.layer import BaseLayer
 
 
 class Flatten3DLayer(BaseLayer):
@@ -16,12 +15,12 @@ class Flatten3DLayer(BaseLayer):
         self.output_shape = output_shape
         assert len(self.input_shape) == 3
 
-    def _compute_output(self, inputs):
+    def get_output(self, inputs):
         # assert len(inputs.shape) == 4
         return T.reshape(inputs, (inputs.shape[0], T.prod(inputs.shape[1:])))
 
-    def _collect_params(self):
+    def get_params(self):
         return []
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()

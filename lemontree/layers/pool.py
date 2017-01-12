@@ -5,7 +5,7 @@ import theano
 import theano.tensor as T
 from theano.tensor.signal.pool import pool_2d
 from collections import OrderedDict
-from .layer import BaseLayer
+from lemontree.layers.layer import BaseLayer
 
 
 class Pooling2DLayer(BaseLayer):
@@ -23,19 +23,19 @@ class Pooling2DLayer(BaseLayer):
         self.stride = stride
         assert len(stride) == 2
 
-    def _compute_output(self, inputs):
-        # assert len(inputs.shape) == 4
-        return pool_2d(inputs,
+    def get_output(self, input):
+        # assert len(input.shape) == 4
+        return pool_2d(input,
                        ds=self.kernel_shape,
                        ignore_border=True,
                        st=self.stride,
                        mode=self.pool_mode
                        )
 
-    def _collect_params(self):
+    def get_params(self):
         return []
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()
 
 
@@ -50,17 +50,17 @@ class GlobalAveragePooling2DLayer(BaseLayer):
         assert self.input_shape[0] == self.output_shape
         self.pool_mode = pool_mode
 
-    def _compute_output(self, inputs):
-        result = pool_2d(inputs,
+    def get_output(self, input):
+        result = pool_2d(input,
                          ds=self.input_shape[1:],
                          ignore_border=True,
                          st=self.input_shape[1:],
                          mode=self.pool_mode
                          )
-        return T.reshape(result, (inputs.shape[0], inputs.shape[1]))
+        return T.reshape(result, (input.shape[0], input.shape[1]))
 
-    def _collect_params(self):
+    def get_params(self):
         return []
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()

@@ -38,11 +38,11 @@ def merge_dicts(x, y):
     return result
 
 # moved
-def get_inputs(loss):
-    loss_inputs = [var for var in graph.inputs([loss]) if isinstance(var, TensorVariable)]
-    loss_inputs = list(OrderedDict.fromkeys(loss_inputs))  # preserve order
-    print('Inputs are : ', loss_inputs)
-    return loss_inputs
+def get_input(loss):
+    loss_input = [var for var in graph.input([loss]) if isinstance(var, TensorVariable)]
+    loss_input = list(OrderedDict.fromkeys(loss_input))  # preserve order
+    print('input are : ', loss_input)
+    return loss_input
 
 
 # moved

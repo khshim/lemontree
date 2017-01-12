@@ -1,4 +1,7 @@
-# Kyuhong Shim 2016
+"""
+This code includes base layer class for every layers.
+Base types are feed-foward, recurrent, and merge.
+"""
 
 import numpy as np
 import theano
@@ -7,24 +10,76 @@ from collections import OrderedDict
 
 
 class BaseLayer(object):
-
+    """
+    This class defines abstract base class for all layers.
+    Every layer should have its own name, which is given from initialization.
+    """
     def __init__(self, name=None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        name: string
+            a string name for this layer.
+
+        Returns
+        -------
+        None.
+        """
+        # set members
         self.name = name
 
-    def _compute_output(self, inputs):
+    def get_output(self, income):
+        """
+        This function creates symbolic function to compute output from an input.
+        Basically, each layer has only one input.
+
+        Parameters
+        ----------
+        income: TensorVariable
+            a TensorVariable to compute the output.
+            name 'input' is pre-defined, so we use 'income' instead.
+
+        Returns
+        -------
+        TensorVariable
+            a TensorVariable computed by the layer.
+        """
         raise NotImplementedError('Abstract class method')
 
-    def _collect_params(self):  # Trained by optimizers
+    def get_params(self):
+        """
+        This function returns interal layer parameters.
+        Parameters may or may not be trained by optimizers.
+        If you don't want optimizer to train this params, there are two ways.
+        First, you can give optimizer "exclude_tags" option for not generating updates.
+        Second, you can add parameters after computing optimizer updates.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        None.
+        """
         raise NotImplementedError('Abstarct class method')
 
-    def _collect_updates(self):  # Additional updates
-        raise NotImplementedError('Abstract class method')
+    def get_updates(self):
+        """
+        This function returns internal updates for each mini-batch training (or not).
+        Layer updates can be merged with optimizer updates by "merge_dicts" function.
 
-    def get_output(self, inputs):
-        output = self._compute_output(inputs)
-        params = self._collect_params()
-        updates = self._collect_updates()
-        return output, params, updates
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        None.
+        """
+        raise NotImplementedError('Abstract class method')
 
 
 class BaseRecurrentLayer(BaseLayer):
@@ -41,17 +96,11 @@ class BaseRecurrentLayer(BaseLayer):
         if unroll and gradient_steps <= 0:
             raise ValueError('Network Unroll requires exact gradient step')
 
-    def _compute_output(self, inputs, masks, hidden_init):
+    def get_output(self, income, masks, hidden_init):
         raise NotImplementedError('Abstract class method')
 
-    def _collect_params(self):  # Trained by optimizers
+    def get_params(self):  # Trained by optimizers
         raise NotImplementedError('Abstarct class method')
 
-    def _collect_updates(self):  # Additional updates
+    def get_updates(self):  # Additional updates
         raise NotImplementedError('Abstract class method')
-
-    def get_output(self, inputs, masks, hidden_init):
-        output = self._compute_output(inputs, masks, hidden_init)
-        params = self._collect_params()
-        updates = self._collect_updates()
-        return output, params, updates

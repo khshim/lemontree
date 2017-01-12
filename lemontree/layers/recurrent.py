@@ -4,7 +4,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 from collections import OrderedDict
-from .layer import BaseRecurrentLayer
+from lemontree.layers.layer import BaseRecurrentLayer
 
 
 class ElmanRecurrentLayer(BaseRecurrentLayer):
@@ -30,14 +30,14 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
         self.b = theano.shared(b, self.name + '_bias')
         self.b.tag = 'bias'
 
-    def _compute_output(self, inputs, masks, hidden_init):
-        # inputs are (n_batch, n_timesteps, n_features)
+    def get_output(self, input, masks, hidden_init):
+        # input are (n_batch, n_timesteps, n_features)
         # change to (n_timesteps, n_batch, n_features)
-        inputs = inputs.dimshuffle(1, 0, *range(2, inputs.ndim))
+        input = input.dimshuffle(1, 0, *range(2, input.ndim))
         # masks are (n_batch, n_timesteps)
         masks = masks.dimshuffle(1, 0, 'x')
-        sequence_length = inputs.shape[0]
-        batch_num = inputs.shape[1]
+        sequence_length = input.shape[0]
+        batch_num = input.shape[1]
 
         if self.out_activation is 'tanh':
             activation = T.tanh
@@ -49,11 +49,11 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
             raise ValueError('Not yet considered')
 
         if self.precompute:
-            additional_dims = tuple(inputs.shape[k] for k in range(2, inputs.ndim))
-            inputs = T.reshape(inputs, (sequence_length*batch_num,) + additional_dims)
-            inputs = T.dot(inputs, self.W)
-            additional_dims = tuple(inputs.shape[k] for k in range(1, inputs.ndim))
-            inputs = T.reshape(inputs, (sequence_length, batch_num,) + additional_dims)
+            additional_dims = tuple(input.shape[k] for k in range(2, input.ndim))
+            input = T.reshape(input, (sequence_length*batch_num,) + additional_dims)
+            input = T.dot(input, self.W)
+            additional_dims = tuple(input.shape[k] for k in range(1, input.ndim))
+            input = T.reshape(input, (sequence_length, batch_num,) + additional_dims)
 
         def step(input, hidden):
             if self.precompute:
@@ -73,7 +73,7 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
             iter_output = []
             outputs_info = [hidden_init]
             for index in counter:
-                step_input = [inputs[index], masks[index]] + outputs_info
+                step_input = [input[index], masks[index]] + outputs_info
                 step_output = step_masked(*step_input)
                 iter_output.append(step_output)
                 outputs_info = [iter_output[-1]]
@@ -81,7 +81,7 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
 
         else:
             hidden_output = theano.scan(fn=step_masked,
-                                        sequences=[inputs, masks],
+                                        sequences=[input, masks],
                                         outputs_info=[hidden_init],
                                         # non_sequences=[self.W, self.U, self.b],
                                         go_backwards=self.backward,
@@ -97,10 +97,10 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
 
         return hidden_output_return
 
-    def _collect_params(self):
+    def get_params(self):
         return [self.W, self.U, self.b]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()
 
 
@@ -142,14 +142,14 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
             self.V = theano.shared(V, self.name + '_weight_V')
             self.V.tag = 'weight'
 
-    def _compute_output(self, inputs, masks, cell_init, hidden_init):
-        # inputs are (n_batch, n_timesteps, n_features)
+    def get_output(self, input, masks, cell_init, hidden_init):
+        # input are (n_batch, n_timesteps, n_features)
         # change to (n_timesteps, n_batch, n_features)
-        inputs = inputs.dimshuffle(1, 0, *range(2, inputs.ndim))
+        input = input.dimshuffle(1, 0, *range(2, input.ndim))
         # masks are (n_batch, n_timesteps)
         masks = masks.dimshuffle(1, 0, 'x')
-        sequence_length = inputs.shape[0]
-        batch_num = inputs.shape[1]
+        sequence_length = input.shape[0]
+        batch_num = input.shape[1]
 
         if self.in_activation is 'tanh':
             in_activation = T.tanh
@@ -179,11 +179,11 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
             raise ValueError('Not yet considered')
 
         if self.precompute:
-            additional_dims = tuple(inputs.shape[k] for k in range(2, inputs.ndim))
-            inputs = T.reshape(inputs, (sequence_length*batch_num,) + additional_dims)
-            inputs = T.dot(inputs, self.W)
-            additional_dims = tuple(inputs.shape[k] for k in range(1, inputs.ndim))
-            inputs = T.reshape(inputs, (sequence_length, batch_num,) + additional_dims)
+            additional_dims = tuple(input.shape[k] for k in range(2, input.ndim))
+            input = T.reshape(input, (sequence_length*batch_num,) + additional_dims)
+            input = T.dot(input, self.W)
+            additional_dims = tuple(input.shape[k] for k in range(1, input.ndim))
+            input = T.reshape(input, (sequence_length, batch_num,) + additional_dims)
 
         def step(input, cell, hidden):
             if self.precompute:
@@ -226,7 +226,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
             iter_output_hidden = []
             outputs_info = [cell_init, hidden_init]
             for index in counter:
-                step_input = [inputs[index], masks[index]] + outputs_info
+                step_input = [input[index], masks[index]] + outputs_info
                 step_output = step_masked(*step_input)
                 iter_output_cell.append(step_output[0])
                 iter_output_hidden.append(step_output[1])
@@ -236,7 +236,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
 
         else:
             cell_output, hidden_output = theano.scan(fn=step_masked,
-                                                     sequences=[inputs, masks],
+                                                     sequences=[input, masks],
                                                      outputs_info=[cell_init, hidden_init],
                                                      # non_sequences=[self.W, self.U, self.b],
                                                      go_backwards=self.backward,
@@ -255,11 +255,11 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
 
         return cell_output_return, hidden_output_return
 
-    def _collect_params(self):
+    def get_params(self):
         if self.peephole:
             return [self.W, self.U, self.V, self.b]
         else:
             return [self.W, self.U, self.b]
 
-    def _collect_updates(self):
+    def get_updates(self):
         return OrderedDict()
