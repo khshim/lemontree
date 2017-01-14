@@ -6,6 +6,7 @@ The result is saved as csv file.
 
 import os
 import numpy as np
+from collections import OrderedDict
 
 
 class SimpleHistory(object):
@@ -35,7 +36,7 @@ class SimpleHistory(object):
         assert isinstance(historydir, str), '"historydir" should be a string path.'
 
         # set members
-        self.history = {}
+        self.history = OrderedDict()
         self.historydir = historydir
         if not os.path.exists(self.historydir):
             os.makedirs(self.historydir)  # make directory if not exists
@@ -64,7 +65,7 @@ class SimpleHistory(object):
         assert isinstance(keys, list), '"keys" should be a list of string keys.'
         for kk in keys:
             if kk not in self.history.keys():
-                self.history[key] = []  # add new key
+                self.history[kk] = []  # add new key
 
     def add_value_to_key(self, value, key):
         """
@@ -83,7 +84,7 @@ class SimpleHistory(object):
         None.
         """
         # check asserts
-        assert isinstance(key, string), '"key" should be a string which indicates history key.'
+        assert isinstance(key, str), '"key" should be a string which indicates history key.'
         assert key in self.history.keys(), '"key" should be given as already existing history key.'
 
         # add
@@ -123,7 +124,7 @@ class SimpleHistory(object):
         None
         """
         # check asserts
-        assert isinstance(key, string), '"key" should be a string which indicates history key.'
+        assert isinstance(key, str), '"key" should be a string which indicates history key.'
         assert key in self.history.keys(), '"key" should be given as already existing history key.'
 
         # find best
@@ -190,10 +191,12 @@ class SimpleHistory(object):
         # print
         if print_keys is None:
             for key in self.history.keys():
-                print('......', key, self.history[key][epoch])
+                if len(self.history[key]) != 0:
+                    print('......', key, self.history[key][epoch])
         else:
             for key in keylist:
-                print('......', key, self.history[key][epoch])
+                if len(self.history[key]) != 0:
+                    print('......', key, self.history[key][epoch])
     
     def save_history_to_csv(self, save_keys=None):
         """
@@ -230,7 +233,7 @@ class SimpleHistory(object):
         import csv
         from itertools import zip_longest
         csv_rows = zip_longest(*self.history.values())
-        with open(self.historydir + csv_filename, 'wb') as csv_file:
+        with open(self.historydir + csv_filename, 'w') as csv_file:
             writer = csv.writer(csv_file, delimiter = '\t')
             writer.writerow(csv_keys)  # writerow 
             writer.writerows(csv_rows)  # writerow 's'
@@ -243,7 +246,7 @@ class HistoryWithEarlyStopping(SimpleHistory):
     Control (or try to control) training by returning behavior flags.
     Early stopping is applied.
     """
-    def __init__(self, max_patience=10, max_change=3):
+    def __init__(self, historydir, max_patience=10, max_change=3):
         """
         This function initializes the class.
         Initialize with how long we wait and how many times we change learning rate.
@@ -251,6 +254,10 @@ class HistoryWithEarlyStopping(SimpleHistory):
 
         Parameters
         ---------
+        historydir: string
+            a string of path where we should make history directory.
+            training history will saved in the directory.
+            csv, image, etc can be saved.
         max_patience: int
             a positive integer which means how long we will wait.
         max_change: int
@@ -260,7 +267,7 @@ class HistoryWithEarlyStopping(SimpleHistory):
         -------
         None.
         """
-        super(HistoryWithEarlyStopping, self).__init__()
+        super(HistoryWithEarlyStopping, self).__init__(historydir)
 
         # set members
         self.patience = 0  # current patience
@@ -284,7 +291,7 @@ class HistoryWithEarlyStopping(SimpleHistory):
         None.
         """
         # check asserts
-        assert isinstance(key, string), '"key" should be a string which indicates history key.'
+        assert isinstance(key, str), '"key" should be a string which indicates history key.'
         assert key in self.history.keys(), '"key" should be given as already existing history key.'
 
         # check conditions
@@ -293,13 +300,13 @@ class HistoryWithEarlyStopping(SimpleHistory):
 
         if current_best_value < current_value:  # something wrong
             self.patience += 1  # increase patience
-            print('......current patience', self.patience)
-            print('......current best value of', key, current_best_value)
-            print('......current best epoch at', current_best_epoch)
+            print('...... current patience', self.patience)
+            print('...... current best value of', key, current_best_value)
+            print('...... current best epoch at', current_best_epoch)
             if self.patience >= self.max_patience:
                 self.change += 1  # increase learning rate changes
                 self.patience = 0  # rest patience, new start with new learning rate
-                print('......current lr change', self.change)
+                print('...... current lr change', self.change)
                 if self.change >= self.max_change:  # enough learning rate changes
                     # load param, stop training, (remove history)
                     return 'end_train'
@@ -311,8 +318,8 @@ class HistoryWithEarlyStopping(SimpleHistory):
                 return 'keep_train'
         else:  # doing good
             self.patience = 0  # reset patience
-            print('......current patience', self.patience)
-            print('......current best value of', key, current_best_value)
-            print('......current best epoch at', current_best_epoch)
+            print('...... current patience', self.patience)
+            print('...... current best value of', key, current_best_value)
+            print('...... current best epoch at', current_best_epoch)
             # save param, keep training
             return 'save_param'

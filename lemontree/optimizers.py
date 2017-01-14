@@ -149,7 +149,7 @@ class BaseOptimizer(object):
         assert isinstance(params, list), '"params" should be a list type.'
 
         # do
-        include_tags = print_tags_in_params(params)  # include all tags to include all parameters
+        include_tags = print_tags_in_params(params, False)  # include all tags to include all parameters
         unblocked_params = filter_params_by_tags(params, include_tags, self.exclude_tags)
         grads = self.compute_gradients(loss, unblocked_params)
         updates = self.gradients_to_updates(unblocked_params, grads)

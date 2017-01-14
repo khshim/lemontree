@@ -36,7 +36,7 @@ class SimpleGraph(object):
         self.outputs = []  # stack outputs of each layer, the last one is the final output
         self.updates = OrderedDict()  # collection of layer internal updates
 
-    def set_input(self, input_):
+    def add_input(self, input_):
         """
         This function starts the symbolic graph by input.
         For most cases, input is defined outside, i.e., T.fmatrix('X').
@@ -124,7 +124,7 @@ class SimpleGraph(object):
         self.layers.append(layer)
         self.outputs.append(layer_output)
         self.params = self.params + layer_params
-        self.updates = merge_dicts(self.updates, layer_updates)
+        self.updates = merge_dicts([self.updates, layer_updates])
         print('Layer added', type(layer).__name__, layer.name)
 
     def add_layers(self, layers):

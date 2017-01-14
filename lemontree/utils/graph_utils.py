@@ -30,7 +30,7 @@ def get_inputs_of_variables(variables):
     assert all(isinstance(var, T.TensorVariable) for var in variables), 'All input should be a tensor variable.'
 
     # do
-    variable_inputs = [var for var in graph.inputs(variables)]
+    variable_inputs = [var for var in graph.inputs(variables) if isinstance(var, T.TensorVariable)]
     variable_inputs = list(OrderedDict.fromkeys(variable_inputs))  # preserve order and make to list
     print('Required inputs are:', variable_inputs)
     return variable_inputs

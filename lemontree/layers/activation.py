@@ -5,57 +5,29 @@ This code includes various non-linear activation layer classes.
 import numpy as np
 import theano
 import theano.tensor as T
+from theano.sandbox.rng_mrg import MRG_RandomStreams as MRG
 from collections import OrderedDict
 from lemontree.layers.layer import BaseLayer
 
 
-class ReLU(BaseLayer):
+class BaseActivationLayer(BaseLayer):
     """
-    This class implements ReLU activation function.
+    This class is an abstract base class for activation layers.
     """
-    def __init__(self, alpha=0, name=None):
+    def __init__(self, name=None):
         """
         This function initializes the class.
 
         Parameters
         ----------
-        alpha: float
-            a positive float value which indicates the tangent of x < 0 range.
-            if alpha is not 0, this function become a leaky ReLU.
         name: string
-            a string name of this class.
+            a string name of the layer.
 
         Returns
         -------
         None.
         """
-        super(ReLU, self).__init__(name)
-        # check asserts
-        assert alpha > 0, '"alpha" should be a positive float value.'
-
-        # set members
-        self.alpha = alpha        
-
-    def get_output(self, input_):
-        """
-        This function overrides the parents' one.
-        Creates symbolic function to compute output from an input.
-        ReLU is element-wise operation.
-
-        Math Expression
-        -------------------
-        y = maximum(x, 0)
-        y = ifelse(x > 0, x, \alpha * x)
-
-        Parameters
-        ----------
-        input_: TensorVariable
-
-        Returns
-        -------
-        TensorVariable
-        """
-        return T.nnet.relu(input_, self.alpha)
+        super(BaseActivationLayer, self).__init__(name)
 
     def get_params(self):
         """
@@ -89,99 +61,402 @@ class ReLU(BaseLayer):
         """
         return OrderedDict()
 
+class ReLU(BaseActivationLayer):
+    """
+    This class implements ReLU activation function.
+    """
+    def __init__(self, alpha=0, name=None):
+        """
+        This function initializes the class.
 
-class Linear(BaseLayer):
+        Parameters
+        ----------
+        alpha: float, default: 0
+            a positive float value which indicates the tangent of x < 0 range.
+            if alpha is not 0, this function become a leaky ReLU.
+        name: string
+            a string name of this class.
 
-    def __init__(self, name=None):
+        Returns
+        -------
+        None.
+        """
         super(ReLU, self).__init__(name)
+        # check asserts
+        assert alpha >= 0, '"alpha" should be a non-negative float value.'
 
-    def get_output(self, input):
-        return input
+        # set members
+        self.alpha = alpha        
 
-    def get_params(self):
-        return []
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Creates symbolic function to compute output from an input.
+        ReLU is element-wise operation.
 
-    def get_updates(self):
-        return OrderedDict()
+        Math Expression
+        -------------------
+        y = maximum(x, 0)
+        y = ifelse(x > 0, x, \alpha * x)
 
+        Parameters
+        ----------
+        input_: TensorVariable
 
-class Tanh(BaseLayer):
-
-    def __init__(self, name = None):
-        super(BaseLayer, self).__init__(name)
-
-    def get_output(self, input):
-        return T.tanh(input)
-
-    def get_params(self):
-        return []
-
-    def get_updates(self):
-        return OrderedDict()
-
-
-class ELU(BaseLayer):
-
-    def __init__(self, alpha=1.0, name=None):
-        self.alpha = alpha
-        super(ELU, self).__init__(name)
-
-    def get_output(self, input):
-        return T.nnet.elu(input, self.alpha)
-
-    def get_params(self):
-        return []
-
-    def get_updates(self):
-        return OrderedDict()
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.nnet.relu(input_, self.alpha)
 
 
-class Sigmoid(BaseLayer):
-
+class Linear(BaseActivationLayer):
+    """
+    This class implements Linear activation function.
+    Not non-linear, just return itself.
+    """
     def __init__(self, name=None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        name: string
+            a string name of this class.
+
+        Returns
+        -------
+        None.
+        """
+        super(Linear, self).__init__(name)
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Return input itself.
+
+        Math Expression
+        -------------------
+        y = maximum(x, 0)
+        y = ifelse(x > 0, x, \alpha * x)
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return input_
+
+
+
+class Tanh(BaseActivationLayer):
+    """
+    This class implements tanh activation function.
+    """
+    def __init__(self, name = None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        name: string
+            a string name of this class.
+
+        Returns
+        -------
+        None.
+        """
+        super(Tanh, self).__init__(name)
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Tanh is element-wise operation.
+
+        Math Expression
+        -------------------
+        y = tanh(x)
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.tanh(input_)
+
+
+
+class ELU(BaseActivationLayer):
+    """
+    This class implements ELU activation function.
+    """
+    def __init__(self, alpha=1, name=None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        alpha: float, default: 1
+            a positive float value which indicates the tangent of x < 0 range.
+            if alpha is not 0, this function become a leaky ReLU.
+        name: string
+            a string name of this class.
+
+        Returns
+        -------
+        None.
+        """
+        # check asserts
+        super(ELU, self).__init__(name)
+        assert alpha >= 0, '"alpha" should be a non-negative float value.'
+        self.alpha = alpha        
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        ELU is element-wise operation.
+        If alpha = 0, same as ReLU.
+
+        Math Expression
+        -------------------
+        y = ifelse(x > 0, x, \alpha * (exp(x) - 1))
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.switch(T.gt(input_, 0), input_, self.alpha * (T.exp(input_) - 1))
+
+
+
+class Sigmoid(BaseActivationLayer):
+    """
+    This class implements Sigmoid activation function.
+    """
+    def __init__(self, name=None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        name: string
+            a string name of this class.
+
+        Returns
+        -------
+        None.
+        """
         super(Sigmoid, self).__init__(name)
 
-    def get_output(self, input):
-        return T.nnet.sigmoid(input)
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Sigmoid is element-wise operation.
 
-    def get_params(self):
-        return []
+        Math Expression
+        -------------------
+        y = 1 / (1 + exp(-x)) = exp(x) / (1 + exp(x))
 
-    def get_updates(self):
-        return OrderedDict()
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.nnet.sigmoid(input_)
 
 
-class Softmax(BaseLayer):
 
+class Softmax(BaseActivationLayer):
+    """
+    This class implements softmax activation function.
+    """
     def __init__(self, name=None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        name: string
+            a string name of this class.
+
+        Returns
+        -------
+        None.
+        """
         super(Softmax, self).__init__(name)
 
-    def get_output(self, input):
-        return T.nnet.softmax(input)
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Softmax converts output energy to probability distributuion.
 
-    def get_params(self):
-        return []
+        Math Expression
+        -------------------
+        y_k = exp(x_k) / \sum(exp(x_i))
 
-    def get_updates(self):
-        return OrderedDict()
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.nnet.softmax(input_)
 
 
-class DistilledSoftmax(BaseLayer):
-
+class DistilationSoftmax(BaseActivationLayer):
+    """
+    This class implements distillation softmax activation function.
+    Softmax distillation is widely used for sharpen / soften distribution.
+    Also used for knowledge transfer.
+    """
     def __init__(self, temperature_init=1.0, name=None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        temperature_init: float, default: 1
+            a positive float value.
+            if T > 1, become more soften, and T < 1, become more sharpen.
+            if temperature is 1, same as normal softmax.
+        name: string
+            a string name of this class.
+
+        Returns
+        -------
+        None.
+        """
+        super(DistilationSoftmax, self).__init__(name)
+        # check asserts
+        assert temperature_init > 0, '"temperature_init" should be a positive float.'
+        
+        # set members
         temperature = np.array(temperature_init).astype('float32')
         self.temperature = theano.shared(temperature, 'temperature')
-        self.temperature.tags = [' temperature']
-        super(DistilledSoftmax, self).__init__(name)
+        self.temperature.tags = ['temperature']
 
     def change_temperature(self, new_temperature):
+        """
+        This function changes the temperature for softmax.
+
+        Parameters
+        ----------
+        new_temperature: float
+            a positive float value which will be a new temperature.
+
+        Returns
+        -------
+        None.
+        """
+        # check asserts
+        assert new_temperature > 0, '"new_temperature" should be a positive float.'
+
         self.temperature.set_value(float(new_temperature))
 
-    def get_output(self, input):
-        return T.nnet.softmax(input / self.temperature)
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Softmax converts output energy to probability distributuion.
 
-    def get_params(self):
-        return []
+        Math Expression
+        -------------------
+        y_k = exp(x_k / T) / \sum(exp(x_i / T))
 
-    def get_updates(self):
-        return OrderedDict()
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.nnet.softmax(input_ / self.temperature)  # divide by temperature
+
+class GumbelSoftmax(BaseActivationLayer):
+    """
+    This class implements gumbel softmax activation.
+    See "Categorical Reparameterization with Gumbel-softmax".
+    (Eric Jang, Shixiang Gu, Ben Poole, 2016.)
+    """
+    def __init__(self, temperature_init=1.0, name=None):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        temperature_init: float, default: 1
+            a positive float value.
+            if T > 1, become more soften, and T < 1, become more sharpen.
+            if temperature is 1, same as normal softmax.
+        name: string
+            a string name of this class.
+
+        Returns
+        -------
+        None.
+        """
+        super(GumbelSoftmax, self).__init__(name)
+        # check asserts
+        assert temperature_init > 0, '"temperature_init" should be a positive float.'
+        
+        # set members
+        temperature = np.array(temperature_init).astype('float32')
+        self.temperature = theano.shared(temperature, 'temperature')
+        self.temperature.tags = ['temperature']
+        self.rng = MRG(np.random.randint(1, 2147462569))
+
+    def change_temperature(self, new_temperature):
+        """
+        This function changes the temperature for softmax.
+
+        Parameters
+        ----------
+        new_temperature: float
+            a positive float value which will be a new temperature.
+
+        Returns
+        -------
+        None.
+        """
+        # check asserts
+        assert new_temperature > 0, '"new_temperature" should be a positive float.'
+
+        self.temperature.set_value(float(new_temperature))
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Softmax converts output energy to probability distributuion.
+
+        Math Expression
+        -------------------
+        g_k ~ Gumbel(0, 1)
+        y_k = exp((x_k + g_k) / T) / \sum(exp((x_i + g_k) / T))
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        # generate random gumbel distribution
+        gumbel_random = self.rng.uniform(input_.shape, 0, 1)
+        gumbel_noise= -T.log(-T.log(gumbel_random + 1e-8) + 1e-8)
+        return T.nnet.softmax((input_ + gumbel_noise) / self.temperature)  # divide by temperature

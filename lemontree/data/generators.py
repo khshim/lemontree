@@ -1,9 +1,12 @@
-# Kyuhong Shim 2016
+"""
+This code includes generators to make minibatch and shuffle.
+Pre-processing is usually done by dataset code.
+"""
 
 import numpy as np
 
 
-class BaseGenerator(object):
+class SimpleGenerator(object):
 
     def __init__(self, name=None, batchsize=128):
         self.name = name
@@ -33,7 +36,7 @@ class BaseGenerator(object):
         return (self.data, self.label)
 
 
-class ImageGenerator(BaseGenerator):
+class ImageGenerator(SimpleGenerator):
 
     def __init__(self, name=None, batchsize=128):
         super(ImageGenerator, self).__init__(name, batchsize)
@@ -124,7 +127,7 @@ class ImageGenerator(BaseGenerator):
         return (batch_data, batch_label)
 
 
-class SequenceGenerator(BaseGenerator):
+class SequenceGenerator(SimpleGenerator):
 
     def __init__(self, name=None, batchsize=128, sequence_length=50):
         super(SequenceGenerator, self).__init__(name, batchsize)

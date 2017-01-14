@@ -75,7 +75,7 @@ def fill_params_by_value(params, value):
         pp.set_value(np.asarray(pp_value_new, dtype=theano.config.floatX))
 
 
-def print_tags_in_params(params, printing=False):
+def print_tags_in_params(params, printing=True):
     """
     This function prints all tags in parameters.
 
@@ -83,13 +83,14 @@ def print_tags_in_params(params, printing=False):
     ----------
     params: list
         a list of (sahred variable) parameters.
-    printing: bool
+    printing: bool, default: True
         a bool value whether to print output on command lines.
 
     Returns
     -------
-    set
-        a set of sorted (string) tags.
+    list
+        a list of sorted (string) tags.
+        converted from set to list at final return.
     """
     # check asserts
     assert isinstance(params, list), '"params" should be a list type.'
@@ -103,7 +104,10 @@ def print_tags_in_params(params, printing=False):
             tag_set.add(tt)
     if printing:
         print('Tags in parameters:', tag_set)
-    return tag_set
+        for pp in params:
+            pt = pp.tags
+            print('...', pp.name, 'Tags:', pt)
+    return list(tag_set)
 
 
 def print_params_statistics(params):

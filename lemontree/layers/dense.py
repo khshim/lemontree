@@ -23,13 +23,13 @@ class DenseLayer(BaseLayer):
         Parameters
         ----------
         input_shape: tuple
-            a tuple of single value, i.e., (input_dim_size,)
+            a tuple of single value, i.e., (input dim,)
         output_shape: tupe
-            a tuple of single value, i.e., (output_dim_size,)
+            a tuple of single value, i.e., (output dim,)
         use_bias: bool
             a bool value whether we use bias or not.
         name: string
-            a string name of this class.
+            a string name of this layer.
 
         Returns
         -------
@@ -49,11 +49,11 @@ class DenseLayer(BaseLayer):
         # create shared variables
         """
         Shared Variables
-        ---------------
+        ----------------
         W: 2D matrix
-            shape is (input_dim_size, output_dim_size).
+            shape is (input dim, output dim).
         b: 1D vector
-            shape is (output_dim_size,).
+            shape is (output dim,).
         """
         W = np.zeros((input_shape[0], output_shape[0])).astype(theano.config.floatX)  # weight matrix
         self.W = theano.shared(W, self.name + '_weight')

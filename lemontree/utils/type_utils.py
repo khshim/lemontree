@@ -3,7 +3,15 @@ This code includes useful functions for base types(list, tuple, dict).
 Most ideas came from google and stackoverflow.
 """
 
+import numpy as np
 from collections import OrderedDict
+
+
+def uint_to_float(data):
+    """
+    This function returns data in uint8 type to float32 type.
+    """
+    return np.asarray(data, dtype='float32')
 
 
 def merge_dicts(dicts):

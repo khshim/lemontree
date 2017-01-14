@@ -59,7 +59,7 @@ class SimpleParameter(object):
         """
         # check asserts
         if not include_tags:  # if no specific guideline is given, which is the most common case
-            include_tags = print_tags_in_params(self.params)  # include all tags to include all parameters
+            include_tags = print_tags_in_params(self.params, False)  # include all tags to include all parameters
         assert isinstance(include_tags,  list), '"include_tags" should be a list type.'
         if exclude_tags is not None:
             assert isinstance(exclude_tags, list), '"exclude_tags" should be a list type.'
@@ -99,7 +99,7 @@ class SimpleParameter(object):
         """
         # check asserts
         if not include_tags:  # if no specific guideline is given, which is the most common case
-            include_tags = print_tags_in_params(self.params)  # include all tags to include all parameters
+            include_tags = print_tags_in_params(self.params, False)  # include all tags to include all parameters
         assert isinstance(include_tags,  list), '"include_tags" should be a list type.'
         if exclude_tags is not None:
             assert isinstance(exclude_tags, list), '"exclude_tags" should be a list type.'

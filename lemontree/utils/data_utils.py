@@ -6,6 +6,31 @@ Functions are not data dependent.
 import numpy as np
 
 
+def int_to_onehot(input, total_class):
+    """
+    This function converts integer label data to one-hot encoded matrix.
+
+    Parameters
+    ----------
+    input: vector
+        a numpy vector that only contains the label of class.
+    total_class: integer
+        a integer value which indicates total classes.
+        output dimension will be this.
+
+    Returns
+    -------
+    ndarray
+        a numpy matrix of (batch size, total class).
+    """
+    # check asserts
+    assert isinstance(total_class, int), '"total_class" should be positive integer, number of classes.'
+    n_input = len(input)
+    result = np.zeros((n_input, total_class)).astype('int32')  # create output
+    result[np.arange(n_input), input] = 1  # set 1 for each label, each data
+    return result
+
+
 def split_data(input, rule=0.9):
     """
     This function split inputs to two groups.
