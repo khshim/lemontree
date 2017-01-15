@@ -102,6 +102,7 @@ def print_tags_in_params(params, printing=True):
         pt = pp.tags  # pt is a list
         for tt in pt:
             tag_set.add(tt)
+    tag_set = sorted(tag_set)
     if printing:
         print('Tags in parameters:', tag_set)
         for pp in params:

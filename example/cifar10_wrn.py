@@ -1,7 +1,8 @@
 """
-This code is an example of how to train MNIST classification.
-The most easiest deep learning example.
-Good to learn how to use LemonTree.
+This code is an example of how to train CIFAR-10 classification.
+The model is Wide Residual Networks (like).
+See "Wide Residual Networks". WRN-16-8 is the structure below.
+(Sergey Zagoruyko, Nikos Komodakis, 2016.)
 """
 
 import time
@@ -9,15 +10,18 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-from lemontree.data.mnist import MNIST
+from lemontree.data.cifar10 import CIFAR10
 from lemontree.data.generators import SimpleGenerator
 from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.graphs.graph import SimpleGraph
 from lemontree.layers.activation import ReLU, Softmax
 from lemontree.experimentals.gumbel_softmax import GumbelSoftmax
+from lemontree.layers.convolution import Convolution3DLayer
+from lemontree.layers.pool import Pooling3DLayer, GlobalAveragePooling3DLayer
 from lemontree.layers.dense import DenseLayer
-from lemontree.layers.normalization import BatchNormalization1DLayer
+from lemontree.layers.normalization import BatchNormalization1DLayer, BatchNormalization3DLayer
+from lemontree.layers.shape import Flatten3DLayer
 from lemontree.initializers import HeNormal
 from lemontree.objectives import CategoricalAccuracy, CategoricalCrossentropy
 from lemontree.optimizers import Adam
@@ -28,43 +32,114 @@ from lemontree.utils.graph_utils import get_inputs_of_variables
 
 np.random.seed(9999)
 base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-experiment_name = 'mnist_mlp'
+experiment_name = 'cifar10_wrn'
 
 #================Prepare data================#
 
-mnist = MNIST(base_datapath, 'flat')
-mnist.split_train_valid(50000)
-train_data, train_label = mnist.get_fullbatch_train()
-test_data, test_label = mnist.get_fullbatch_test()
-valid_data, valid_label = mnist.get_fullbatch_valid()
+cifar10 = CIFAR10(base_datapath, 'tensor')
+cifar10.split_train_valid(45000)
+train_data, train_label = cifar10.get_fullbatch_train()
+test_data, test_label = cifar10.get_fullbatch_test()
+valid_data, valid_label = cifar10.get_fullbatch_valid()
 
-train_gen = SimpleGenerator('train', 250)
+train_gen = SimpleGenerator('train', 60)
 train_gen.initialize(train_data, train_label)
-test_gen = SimpleGenerator('test', 250)
+test_gen = SimpleGenerator('test', 60)
 test_gen.initialize(test_data, test_label)
-valid_gen = SimpleGenerator('valid', 250)
+valid_gen = SimpleGenerator('valid', 60)
 valid_gen.initialize(valid_data, valid_label)
 
 #================Build graph================#
 
-x = T.fmatrix('X')
+x = T.ftensor4('X')
 y = T.ivector('y')
 
 graph = SimpleGraph(experiment_name)
 graph.add_input(x)
-graph.add_layers([DenseLayer((784,),(1024,), use_bias=False, name='dense1'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn1'),
-                  ReLU(name='relu1'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense2'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn2'),
+graph.add_layers([Convolution3DLayer((3,32,32), (16,32,32), (3,3), 'half', use_bias=False, name='conv1'),  # 1
+                  BatchNormalization3DLayer((16,32,32), name='bn1'),
+                  ReLU(name='relu1')])
+res1 = graph.get_output()
+
+graph_res1 = SimpleGraph(experiment_name + '_res1')
+graph_res1.add_input(res1)
+graph_res1.add_layer(Convolution3DLayer((16,32,32), (128,32,32), (1,1), name='conv_res1'))
+
+# block 1_1
+graph.add_layers([Convolution3DLayer((16,32,32), (128,32,32), (3,3), 'half', use_bias=False, name='conv2'),  # 2
+                  BatchNormalization3DLayer((128,32,32), name='bn2'),
                   ReLU(name='relu2'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense3'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn3'),
-                  ReLU(name='relu3'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense4'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn4'),
+                  Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', name='conv3')])  # 3
+
+graph.merge_graph(graph_res1, 'add')
+res2 = graph.get_output()
+
+graph_res2 = SimpleGraph(experiment_name + '_res2')
+graph_res2.add_input(res2)
+
+# block 1_2
+graph.add_layers([Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', use_bias=False, name='conv4'),  # 4
+                  BatchNormalization3DLayer((128,32,32), name='bn4'),
                   ReLU(name='relu4'),
-                  DenseLayer((1024,),(10,), name='dense5'),
+                  Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', name='conv5')])  # 5
+
+graph.merge_graph(graph_res2, 'add')
+res3 = graph.get_output()
+
+graph_res3 = SimpleGraph(experiment_name + '_res3')
+graph_res3.add_input(res3)
+graph_res3.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (1,1), 'half', (2,2), name='conv_res3'))
+
+# block 2_1
+graph.add_layers([Convolution3DLayer((128,32,32), (256,16,16), (3,3), 'half', (2,2), use_bias=False, name='conv6'),  # 6
+                  BatchNormalization3DLayer((256,16,16), name='bn6'),
+                  ReLU(name='relu6'),
+                  Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', name='conv7')])  # 7
+
+graph.merge_graph(graph_res3, 'add')
+res4 = graph.get_output()
+
+graph_res4 = SimpleGraph(experiment_name + '_res4')
+graph_res4.add_input(res4)
+
+# block 2_2
+graph.add_layers([Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', use_bias=False, name='conv8'),  # 8
+                  BatchNormalization3DLayer((256,16,16), name='bn8'),
+                  ReLU(name='relu8'),
+                  Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', name='conv9')])  # 9
+
+graph.merge_graph(graph_res4, 'add')
+res5 = graph.get_output()
+
+graph_res5 = SimpleGraph(experiment_name + '_res5')
+graph_res5.add_input(res5)
+graph_res5.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (1,1), 'half', (2,2), name='conv_res5'))
+
+# block 3_1
+graph.add_layers([Convolution3DLayer((256,16,16), (512,8,8), (3,3), 'half', (2,2), use_bias=False, name='conv10'),  # 10
+                  BatchNormalization3DLayer((512,8,8), name='bn10'),
+                  ReLU(name='relu10'),
+                  Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', name='conv11')])  # 11
+
+graph.merge_graph(graph_res5, 'add')
+res6 = graph.get_output()
+
+graph_res6 = SimpleGraph(experiment_name + '_res6')
+graph_res6.add_input(res6)
+
+# block 3_2
+graph.add_layers([Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', use_bias=False, name='conv12'),  # 12
+                  BatchNormalization3DLayer((512,8,8), name='bn12'),
+                  ReLU(name='relu12'),
+                  Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', name='conv13')])  # 13
+
+graph.merge_graph(graph_res6, 'add')
+
+# end
+graph.add_layers([BatchNormalization3DLayer((512,8,8), name='bn14'),
+                  ReLU(name='relu14'),
+                  GlobalAveragePooling3DLayer((512,8,8), (512,), name='pool15'),
+                  DenseLayer((512,), (10,), name='dense15'),
                   Softmax(name='softmax1')])
 
 loss = CategoricalCrossentropy().get_loss(graph.get_output(), y)
@@ -190,4 +265,3 @@ for epoch in range(1000):
 test_testset()
 hist.print_history_of_epoch()
 hist.save_history_to_csv()
-

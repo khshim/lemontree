@@ -125,7 +125,7 @@ class SimpleGraph(object):
         self.outputs.append(layer_output)
         self.params = self.params + layer_params
         self.updates = merge_dicts([self.updates, layer_updates])
-        print('Layer added', type(layer).__name__, layer.name)
+        print(self.name, 'Layer added', type(layer).__name__, layer.name)
 
     def add_layers(self, layers):
         """
@@ -156,7 +156,7 @@ class SimpleGraph(object):
         One is for training, and the other is for inference (validation, test).
         Flag indicates which mode is used.
 
-        Parameyers
+        Parameters
         ----------
         flag: int (or float)
             a single scalar value to be a new flag.
@@ -170,3 +170,31 @@ class SimpleGraph(object):
         for ll in self.layers:
             if hasattr(ll, 'flag'):  # if a layer need mode change, it should have 'flag' as member.
                 ll.change_flag(flag)  # 1: train / -1: evaluation
+
+    def merge_graph(self, target, mode='add'):
+        """
+        This function merge other graph in this graph.
+        Consider parameters, updates, and outputs.
+        Two outputs are merged by mode.
+        For ResNet, mode = 'add'.
+
+        Parameters
+        ----------
+        target: graph
+            a single graph that will be merged to the graph.
+        mode: string, default: 'add'
+            a string that how the graph will be merged.
+            currently only 'add' is supported.
+
+        Returns
+        -------
+        None.
+        """
+        # collect from target graph
+        self.params = self.params + target.params
+        self.updates = merge_dicts([self.updates, target.updates])
+        if mode == 'add':
+            self.outputs.append(self.get_output() + target.get_output())
+            print(self.name, 'Graph', target.name, 'Merged')
+        else:
+            raise NotImplementedError('Currently not available mode')

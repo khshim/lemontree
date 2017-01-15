@@ -87,8 +87,8 @@ class CIFAR10(BaseDataset):
         self.test_label = test_label[test_order]
 
         if mode == 'tensor':
-            train_data = np.reshape(train_data, (train_data.shape[0], 3, 32, 32))
-            test_data = np.reshape(test_data, (test_data.shape[0], 3, 32, 32))
+            self.train_data = np.reshape(self.train_data, (self.train_data.shape[0], 3, 32, 32))
+            self.test_data = np.reshape(self.test_data, (self.test_data.shape[0], 3, 32, 32))
         elif mode == 'flat':
             pass
         else:

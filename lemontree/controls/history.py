@@ -234,7 +234,7 @@ class SimpleHistory(object):
         from itertools import zip_longest
         csv_rows = zip_longest(*self.history.values())
         with open(self.historydir + csv_filename, 'w') as csv_file:
-            writer = csv.writer(csv_file, delimiter = '\t')
+            writer = csv.writer(csv_file)
             writer.writerow(csv_keys)  # writerow 
             writer.writerows(csv_rows)  # writerow 's'
         print('History save done')        

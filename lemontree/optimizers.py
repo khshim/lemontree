@@ -156,7 +156,36 @@ class BaseOptimizer(object):
         return updates
 
     def get_params(self):
+        """
+        This function returns optimizer parameters.
+        Momentum, rho, etc are parameters that are unchanged.
+        Velocity, accu, etc are parameters change during training, with tag 'optimizer_param'.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        None.
+        """
         return self.params
+
+    def reset_params(self):
+        """
+        This function resets all internal parameters to zero, for clean start.
+        
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        None.
+        """
+        for pp in self.params:
+            if 'optimizer_param' in pp.tags:
+                pp.set_value(np.zeros(pp.get_value(borrow=True).shape, dtype=theano.config.floatX))
 
 
 class SGD(BaseOptimizer):

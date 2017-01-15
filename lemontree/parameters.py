@@ -75,7 +75,7 @@ class SimpleParameter(object):
                 np.save(self.paramdir + pp.name + '.npy', pp.get_value())
             else:  # save to other directory
                 np.save(save_to_other_dir + pp.name + '.npy', pp.get_value())
-        print('...weight save done')
+        print('... weight save done')
 
     def load_params(self, include_tags=None, exclude_tags=None, load_from_other_dir=None):
         """
@@ -113,4 +113,4 @@ class SimpleParameter(object):
                 pp.set_value(np.load(self.paramdir + pp.name + '.npy'))
             else:
                 pp.set_value(np.load(load_from_other_dir + pp.name + '.npy'))
-        print('...weight load done')
+        print('... weight load done')

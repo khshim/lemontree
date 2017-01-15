@@ -1,6 +1,5 @@
 """
 This code includes generators to make minibatch and shuffle.
-Pre-processing is usually done by dataset code.
 """
 
 import numpy as np

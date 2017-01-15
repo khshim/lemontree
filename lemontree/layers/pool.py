@@ -59,7 +59,7 @@ class Pooling3DLayer(BaseLayer):
         assert isinstance(kernel_shape, tuple) and len(kernel_shape) == 2, '"kernel_shape" should be a tuple with two values.'
         assert isinstance(stride, tuple) and len(stride) == 2, '"stride" should be a tuple with two values.'
         assert isinstance(padding, tuple) and len(padding) == 2, '"padding" should be a tuple with two values.'
-        assert poolmode in ['max', 'sum', 'average_inc_pad', 'average_exc_pad'], '"poolmode should be a string mode. see theano.tensor.signal.pool.pool_2d for details.'
+        assert pool_mode in ['max', 'sum', 'average_inc_pad', 'average_exc_pad'], '"poolmode should be a string mode. see theano.tensor.signal.pool.pool_2d for details.'
 
         # set members
         self.input_shape = input_shape

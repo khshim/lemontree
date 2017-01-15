@@ -36,7 +36,7 @@ class Flatten3DLayer(BaseLayer):
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'
-        assert input_shape[0] == output_shape[0], 'Flatten result is 2D tensor of (batch size, input channel * input width * input height).'
+        assert np.prod(input_shape) == output_shape[0], 'Flatten result is 2D tensor of (batch size, input channel * input width * input height).'
 
         # set members
         self.input_shape = input_shape
