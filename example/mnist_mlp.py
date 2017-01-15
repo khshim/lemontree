@@ -42,35 +42,54 @@ test_gen.initialize(test_data, test_label)
 valid_gen = SimpleGenerator('valid', 250)
 valid_gen.initialize(valid_data, valid_label)
 
+def build_model(input_, name):
+    graph = SimpleGraph(name)
+    graph.add_input(input_)
+    graph.add_layers([DenseLayer((784,),(1024,), use_bias=False, name='dense1'),
+                      BatchNormalization1DLayer((1024,), 0.9, name='bn1'),
+                      ReLU(name='relu1'),
+                      DenseLayer((1024,),(1024,), use_bias=False, name='dense2'),
+                      BatchNormalization1DLayer((1024,), 0.9, name='bn2'),
+                      ReLU(name='relu2'),
+                      DenseLayer((1024,),(1024,), use_bias=False, name='dense3'),
+                      BatchNormalization1DLayer((1024,), 0.9, name='bn3'),
+                      ReLU(name='relu3'),
+                      DenseLayer((1024,),(1024,), use_bias=False, name='dense4'),
+                      BatchNormalization1DLayer((1024,), 0.9, name='bn4'),
+                      ReLU(name='relu4'),
+                      DenseLayer((1024,),(10,), name='dense5'),
+                      GumbelSoftmax(name='softmax1')])
+
+    loss = CategoricalCrossentropy().get_loss(graph.get_output(), y)
+    accuracy = CategoricalAccuracy().get_loss(graph.get_output(), y)
+    outputs = [loss, accuracy]
+
+    return graph, outputs
+
+def compile_train_function(outputs, updates):
+    func = theano.function(inputs=get_inputs_of_variables(outputs),
+                           outputs=outputs,
+                           updates=updates,
+                           allow_input_downcast=True)
+    return func
+
+def compile_test_function(outputs):
+    func = theano.function(inputs=get_inputs_of_variables(outputs),
+                           outputs=outputs,
+                           allow_input_downcast=True)
+    return func
+
+    graph_params = graph.get_params()
+    graph_updates = graph.get_updates()
+
+def run_with_inputs(func, inputs):
+    return func(*inputs)
+
 x = T.fmatrix('X')
 y = T.ivector('y')
 
-graph = SimpleGraph(experiment_name)
-graph.add_input(x)
-graph.add_layers([DenseLayer((784,),(1024,), use_bias=False, name='dense1'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn1'),
-                  ReLU(name='relu1'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense2'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn2'),
-                  ReLU(name='relu2'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense3'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn3'),
-                  ReLU(name='relu3'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense4'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn4'),
-                  ReLU(name='relu4'),
-                  DenseLayer((1024,),(10,), name='dense5'),
-                  GumbelSoftmax(name='softmax1')])
-
-graph_params = graph.get_params()
-graph_updates = graph.get_updates()
-graph_output = graph.get_output()
-
 HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_tags_in_params(graph_params)
-
-loss = CategoricalCrossentropy().get_loss(graph_output, y)
-accuracy = CategoricalAccuracy().get_loss(graph_output, y)
 
 adam = Adam(0.002)
 optimizer_updates = adam.get_updates(loss, graph_params)
@@ -84,14 +103,8 @@ params_saver.save_params()
 
 graph_inputs = get_inputs_of_variables([loss, accuracy])
 
-train_func = theano.function(inputs=graph_inputs,
-                             outputs=[loss, accuracy],
-                             updates=total_updates,
-                             allow_input_downcast=True)
-
-test_func = theano.function(inputs=graph_inputs,
-                            outputs=[loss, accuracy],
-                            allow_input_downcast=True)
+train_func = compile_train_function([loss, accuracy], total_updates)
+test_func = compile_test_function([loss, accuracy])
 
 lr_scheduler = LearningRateMultiplyScheduler(adam.lr, 0.2)
 hist = HistoryWithEarlyStopping(experiment_name + '_history/', 10, 5)

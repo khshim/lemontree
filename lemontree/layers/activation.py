@@ -10,58 +10,7 @@ from collections import OrderedDict
 from lemontree.layers.layer import BaseLayer
 
 
-class BaseActivationLayer(BaseLayer):
-    """
-    This class is an abstract base class for activation layers.
-    """
-    def __init__(self, name=None):
-        """
-        This function initializes the class.
-
-        Parameters
-        ----------
-        name: string
-            a string name of the layer.
-
-        Returns
-        -------
-        None.
-        """
-        super(BaseActivationLayer, self).__init__(name)
-
-    def get_params(self):
-        """
-        This function overrides the parents' one.
-        Returns interal layer parameters.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        list
-            an empty list for consistency.
-        """
-        return []
-
-    def get_updates(self):
-        """
-        This function overrides the parents' one.
-        Returns internal updates.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        OrderedDict
-            an empty dictionary for consistency.
-        """
-        return OrderedDict()
-
-class ReLU(BaseActivationLayer):
+class ReLU(BaseLayer):
     """
     This class implements ReLU activation function.
     """
@@ -110,7 +59,7 @@ class ReLU(BaseActivationLayer):
         return T.nnet.relu(input_, self.alpha)
 
 
-class Linear(BaseActivationLayer):
+class Linear(BaseLayer):
     """
     This class implements Linear activation function.
     Not non-linear, just return itself.
@@ -152,7 +101,7 @@ class Linear(BaseActivationLayer):
 
 
 
-class Tanh(BaseActivationLayer):
+class Tanh(BaseLayer):
     """
     This class implements tanh activation function.
     """
@@ -192,7 +141,7 @@ class Tanh(BaseActivationLayer):
 
 
 
-class ELU(BaseActivationLayer):
+class ELU(BaseLayer):
     """
     This class implements ELU activation function.
     """
@@ -239,7 +188,7 @@ class ELU(BaseActivationLayer):
 
 
 
-class Sigmoid(BaseActivationLayer):
+class Sigmoid(BaseLayer):
     """
     This class implements Sigmoid activation function.
     """
@@ -279,7 +228,7 @@ class Sigmoid(BaseActivationLayer):
 
 
 
-class Softmax(BaseActivationLayer):
+class Softmax(BaseLayer):
     """
     This class implements softmax activation function.
     """
@@ -318,7 +267,7 @@ class Softmax(BaseActivationLayer):
         return T.nnet.softmax(input_)
 
 
-class DistilationSoftmax(BaseActivationLayer):
+class DistilationSoftmax(BaseLayer):
     """
     This class implements distillation softmax activation function.
     Softmax distillation is widely used for sharpen / soften distribution.
@@ -387,7 +336,7 @@ class DistilationSoftmax(BaseActivationLayer):
         """
         return T.nnet.softmax(input_ / self.temperature)  # divide by temperature
 
-class GumbelSoftmax(BaseActivationLayer):
+class GumbelSoftmax(BaseLayer):
     """
     This class implements gumbel softmax activation.
     See "Categorical Reparameterization with Gumbel-softmax".

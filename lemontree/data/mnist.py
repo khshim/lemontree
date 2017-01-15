@@ -13,11 +13,12 @@ Additional foder structure: '~~~/data/mnist/mnist_all.mat'
 
 import numpy as np
 import scipy.io
-from lemontree.utils.data_utils import split_data, int_to_onehot
+from lemontree.utils.data_utils import int_to_onehot
 from lemontree.utils.type_utils import uint_to_float
+from lemontree.data.dataset import BaseDataset
 
 
-class MNIST(object):
+class MNIST(BaseDataset):
     """
     This class load mnist dataset to a tensor form.
     Flat mode returns 2D matrix, and tensor mode returns 4D matrix.
@@ -25,7 +26,7 @@ class MNIST(object):
     def __init__(self, base_datapath, mode='flat', seed=999, one_hot=False):
         """
         This function initializes the class.
-        MNISTt is not a big dataset, so we can hold all floating values in memory.
+        MNIST is not a big dataset, so we can hold all floating values in memory.
 
         Parameters
         ----------
@@ -42,15 +43,15 @@ class MNIST(object):
         -------
         None.
         """
+        super(MNIST, self).__init__(base_datapath, seed)
         # check asserts
-        assert isinstance(base_datapath, str), '"base_datapath" should be a string path.'
         assert mode in ['flat', 'tensor'], '"mode" should be a string either "flat" or "tensor".'
 
         # valid not yet divided
         self.valid_exist = False  # flag off
 
         # load
-        mnist_file = base_datapath + 'mnist/mnist_all.mat'
+        mnist_file = self.base_datapath + 'mnist/mnist_all.mat'
         print('MNIST load file:', mnist_file)
         mnist = scipy.io.loadmat(mnist_file)
 
@@ -103,7 +104,6 @@ class MNIST(object):
                                 np.tile(np.array([8]), (test8.shape[0],)),
                                 np.tile(np.array([9]), (test9.shape[0],))))
 
-        self.rng = np.random.RandomState(seed)
         train_order = self.rng.permutation(train_label.shape[0])
         test_order = self.rng.permutation(test_label.shape[0])
 
@@ -124,23 +124,3 @@ class MNIST(object):
             self.train_label = int_to_onehot(self.train_label, 10)
             self.test_label = int_to_onehot(self.test_label, 10)
 
-    def split_train_valid(self, rule=0.9):
-        self.valid_exist = True  # flag on
-        self.train_data, self.valid_data = split_data(self.train_data, rule)
-        self.train_label, self.valid_label = split_data(self.train_label, rule)
-
-    def get_fullbatch_train(self):
-        print('Train data shape: ', self.train_data.shape, self.train_data.dtype)
-        print('Train label shape: ', self.train_label.shape, self.train_label.dtype)
-        return self.train_data, self.train_label
-    
-    def get_fullbatch_test(self):
-        print('Test data shape: ', self.test_data.shape, self.test_data.dtype)
-        print('Test label shape: ', self.test_label.shape, self.test_label.dtype)
-        return self.test_data, self.test_label
-
-    def get_fullbatch_valid(self):
-        assert self.valid_exist, 'First divide train and valid by "divide_train_valid".'
-        print('Valid data shape: ', self.valid_data.shape, self.valid_data.dtype)
-        print('Valid label shape: ', self.valid_label.shape, self.valid_label.dtype)
-        return self.valid_data, self.valid_label

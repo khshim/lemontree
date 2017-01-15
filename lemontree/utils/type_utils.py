@@ -14,6 +14,13 @@ def uint_to_float(data):
     return np.asarray(data, dtype='float32')
 
 
+def uint_to_int(data):
+    """
+    This function returns data in uint8 type to int32 type.
+    """
+    return np.asarray(data, dtype='int32')
+
+
 def merge_dicts(dicts):
     """
     This function merge multiple dictionaries into one dictionary.

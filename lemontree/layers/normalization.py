@@ -12,7 +12,7 @@ from lemontree.layers.layer import BaseLayer
 
 class BatchNormalization1DLayer(BaseLayer):
     """
-    This class implements batch normalization for 1d representation.
+    This class implements batch normalization for 1D representation.
     """
     def __init__(self, input_shape, momentum=0.99, name=None):
         """
@@ -60,7 +60,7 @@ class BatchNormalization1DLayer(BaseLayer):
         beta: 1D vector
             shape is (input dim,).
         """
-        self.flag = theano.shared(1, 'flag')  # 1: train / -1: evaluation
+        self.flag = theano.shared(1, 'flag')  # 1: train / -1: inference
         self.flag.tags = ['flag', self.name]
         bn_mean = np.zeros(input_shape).astype(theano.config.floatX)  # initialize with zero
         self.bn_mean = theano.shared(bn_mean, self.name + '_bn_mean')
@@ -89,7 +89,7 @@ class BatchNormalization1DLayer(BaseLayer):
         -------
         None.
         """
-        self.flag.set_value(float(new_flag))  # 1: train, -1: evaluation
+        self.flag.set_value(float(new_flag))  # 1: train, -1: inference
 
     def get_output(self, input_):
         """
@@ -139,7 +139,7 @@ class BatchNormalization1DLayer(BaseLayer):
         Returns
         -------
         list
-            an empty list for consistency.
+            a list of shared variables used.
         """
         return [self.gamma, self.beta, self.bn_mean, self.bn_std]
 
@@ -155,52 +155,160 @@ class BatchNormalization1DLayer(BaseLayer):
         Returns
         -------
         OrderedDict
-            an empty dictionary for consistency.
+            a dictionary of internal updates.
         """
         return self.updates
 
 
-class BatchNormalization2DLayer(BaseLayer):
-
+class BatchNormalization3DLayer(BaseLayer):
+    """
+    This class implements batch normalization for 3D representation.
+    """
     def __init__(self, input_shape, momentum=0.99, name=None):
-        super(BatchNormalization2DLayer, self).__init__(name)
-        self.input_shape = input_shape  # (number of maps, width of map, height of map)
-        assert len(self.input_shape) == 3
+        """
+        This function initializes the class.
+        Input is 4D tenor, output is 4D tensor.
+        For long term experiment, use momentum = 0.99, else, 0.9.
+
+        Parameters
+        ----------
+        input_shape: tuple
+            a tuple of three values, i.e., (input channel, input width, input height)
+            since input shape is same to output shape, there is no output shape argument.
+        momentum: float, default: 0.99
+            a float value which will used to average inference mean and variance.
+            using exponential moving average.
+        name: string
+            a string name of this layer.
+
+        Returns
+        -------
+        None.
+        """
+        super(BatchNormalization3DLayer, self).__init__(name)
+        # check asserts
+        assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three value.'
+        assert momentum > 0 and momentum < 1, '"momentum" should be a float value in range (0, 1).'
+
+        # set members
+        self.input_shape = input_shape
         self.momentum = momentum
         self.updates = OrderedDict()
-        self.flag = theano.shared(1, 'flag')  # 1: train / -1: evaluation
+
+        # create shared variables
+        """
+        Shared Variables
+        ----------------
+        flag: scalar
+            a scalar value to distinguish training mode and inference mode.
+        bn_mean: 1D vector
+            shape is (input channel,).
+        bn_std: 1D vector
+            shape is (input channle,).
+        gamma: 1D vector
+            shape is (input channle,).
+        beta: 1D vector
+            shape is (input channel,).
+        """
+        self.flag = theano.shared(1, 'flag')  # 1: train / -1: inference
         self.flag.tag = 'flag'
         bn_mean = np.zeros((input_shape[0],)).astype(theano.config.floatX)
         self.bn_mean = theano.shared(bn_mean, self.name + '_bn_mean')
-        self.bn_mean.tag = 'bn_mean'
+        self.bn_mean.tags = ['bn_mean', self.name]
         bn_std = np.ones((input_shape[0],)).astype(theano.config.floatX)
         self.bn_std = theano.shared(bn_std, self.name + '_bn_std')
-        self.bn_std.tag = 'bn_std'
+        self.bn_std.tags = ['bn_std', self.name]
         gamma = np.ones((input_shape[0],)).astype(theano.config.floatX)
         self.gamma = theano.shared(gamma, self.name + '_gamma')
-        self.gamma.tag = 'gamma'
+        self.gamma.tags = ['gamma', self.name]
         beta = np.zeros((input_shape[0],)).astype(theano.config.floatX)
         self.beta = theano.shared(beta, self.name + '_beta')
-        self.beta.tag = 'beta'
+        self.beta.tags = ['beta', self.name]
 
     def change_flag(self, new_flag):
-        self.flag.set_value(float(new_flag))
+        """
+        This function change flag to change training and inference mode.
+        If flag > 0, training mode, else, inference mode.
 
-    def get_output(self, input):
-        batch_mean = T.mean(input, axis=[0, 2, 3])
-        batch_std = T.std(input, axis=[0, 2, 3])
+        Parameters
+        ---------
+        new_flag: int (or float)
+            a single scalar value to be a new flag.
+
+        Returns
+        -------
+        None.
+        """
+        self.flag.set_value(float(new_flag))  # 1: train, -1: inference
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Creates symbolic function to compute output from an input.
+        The symbolic function use theano switch function conditioned by flag.
+
+        Math Expression
+        ---------------
+        For inference:
+            y = (x - mean(x)) / std(x)
+            mean and std through mini-batch.
+        For training:
+            y = (x - batch_mean) / batch_std
+            mean and std for inference.
+        batch_mean = momentum * batch_mean + (1 - momentum) * mean(x)
+        batch_std = momentum * batch_std + (1 - momentum) * std(x)
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        Tensorvariable         
+        """
+        # mean and std for current mini-batch
+        batch_mean = T.mean(input_, axis=[0, 2, 3])  # mean through batch, width, height
+        batch_std = T.std(input_, axis=[0, 2, 3])  # std through batch, width, height
         self.updates[self.bn_mean] = self.bn_mean * self.momentum + batch_mean * (1 - self.momentum)
         self.updates[self.bn_std] = self.bn_std * self.momentum + batch_std * (1 - self.momentum)
+
+        # conditional compute
         return T.switch(T.gt(self.flag, 0),
-                        T.nnet.batch_normalization(input, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
-                        batch_mean.dimshuffle('x', 0, 'x', 'x'), batch_std.dimshuffle('x', 0, 'x', 'x')),
-                        T.nnet.batch_normalization(input, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
-                        self.bn_mean.dimshuffle('x', 0, 'x', 'x'), self.bn_std.dimshuffle('x', 0, 'x', 'x')))
+                        T.nnet.batch_normalization(input_, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
+                        batch_mean.dimshuffle('x', 0, 'x', 'x'), batch_std.dimshuffle('x', 0, 'x', 'x'), 'high_mem'),
+                        T.nnet.batch_normalization(input_, self.gamma.dimshuffle('x', 0, 'x', 'x'), self.beta.dimshuffle('x', 0, 'x', 'x'),
+                        self.bn_mean.dimshuffle('x', 0, 'x', 'x'), self.bn_std.dimshuffle('x', 0, 'x', 'x'), 'high_mem'))
 
     def get_params(self):
+        """
+        This function overrides the parents' one.
+        Returns interal layer parameters.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        list
+            a list of shared variables used.
+        """
         return [self.gamma, self.beta, self.bn_mean, self.bn_std]
 
     def get_updates(self):
+        """
+        This function overrides the parents' one.
+        Returns internal updates.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        OrderedDict
+            a dictionary of internal updates.
+        """
         return self.updates
 
 

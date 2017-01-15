@@ -64,7 +64,8 @@ class BaseLayer(object):
         -------
         None.
         """
-        raise NotImplementedError('Abstarct class method')
+        return []  # for default
+        # raise NotImplementedError('Abstarct class method')
 
     def get_updates(self):
         """
@@ -80,7 +81,8 @@ class BaseLayer(object):
         -------
         None.
         """
-        raise NotImplementedError('Abstract class method')
+        return OrderedDict()  # for default
+        # raise NotImplementedError('Abstract class method')
 
 
 class BaseRecurrentLayer(BaseLayer):

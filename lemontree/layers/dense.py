@@ -18,7 +18,7 @@ class DenseLayer(BaseLayer):
         """
         This function initializes the class.
         Input is 2D tensor, output is 2D tensor.
-        For efficient followed batch normalization, use_bias = False.
+        For efficient following batch normalization, use_bias = False.
 
         Parameters
         ----------
@@ -26,7 +26,7 @@ class DenseLayer(BaseLayer):
             a tuple of single value, i.e., (input dim,)
         output_shape: tupe
             a tuple of single value, i.e., (output dim,)
-        use_bias: bool
+        use_bias: bool, default: True
             a bool value whether we use bias or not.
         name: string
             a string name of this layer.
@@ -98,25 +98,9 @@ class DenseLayer(BaseLayer):
         Returns
         -------
         list
-            an empty list for consistency.
+            a list of shared variables used.
         """
         if self.use_bias:
             return [self.W, self.b]
         else:
             return [self.W]
-
-    def get_updates(self):
-        """
-        This function overrides the parents' one.
-        Returns internal updates.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        OrderedDict
-            an empty dictionary for consistency.
-        """
-        return OrderedDict()
