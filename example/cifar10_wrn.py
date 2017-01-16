@@ -31,7 +31,9 @@ from lemontree.utils.type_utils import merge_dicts
 from lemontree.utils.graph_utils import get_inputs_of_variables
 
 np.random.seed(9999)
-base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+base_datapath = 'D:/Dropbox/Project/data/'
+# base_datapath = '/home/khshim/data/'
 experiment_name = 'cifar10_wrn'
 
 #================Prepare data================#
@@ -42,12 +44,9 @@ train_data, train_label = cifar10.get_fullbatch_train()
 test_data, test_label = cifar10.get_fullbatch_test()
 valid_data, valid_label = cifar10.get_fullbatch_valid()
 
-train_gen = SimpleGenerator('train', 60)
-train_gen.initialize(train_data, train_label)
-test_gen = SimpleGenerator('test', 60)
-test_gen.initialize(test_data, test_label)
-valid_gen = SimpleGenerator('valid', 60)
-valid_gen.initialize(valid_data, valid_label)
+train_gen = SimpleGenerator([train_data, train_label], 128, 'train')
+test_gen = SimpleGenerator([test_data, test_label], 128, 'test')
+valid_gen = SimpleGenerator([valid_data, valid_label], 128, 'valid')
 
 #================Build graph================#
 

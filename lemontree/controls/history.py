@@ -220,10 +220,10 @@ class SimpleHistory(object):
 
         # select and sort keys
         if save_keys is None:
-            csv_keys = sorted(self.history.keys())  # sort alphabetically
+            csv_keys = self.history.keys()  # sort alphabetically
             csv_filename = 'history_all.csv'
         else:
-            csv_keys = sorted(save_keys)
+            csv_keys = save_keys
             csv_filename = 'history'
             for key in csv_keys:
                 csv_filename += '_' + key
@@ -233,7 +233,7 @@ class SimpleHistory(object):
         import csv
         from itertools import zip_longest
         csv_rows = zip_longest(*self.history.values())
-        with open(self.historydir + csv_filename, 'w') as csv_file:
+        with open(self.historydir + csv_filename, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(csv_keys)  # writerow 
             writer.writerows(csv_rows)  # writerow 's'

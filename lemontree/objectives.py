@@ -143,11 +143,20 @@ class CategoricalAccuracy(BaseObjective):
         """
         # do
         if self.top_k == 1:
-            return T.mean(T.eq(T.argmax(predict, axis=-1), label))
+            if label.ndim == 1:
+                return T.mean(T.eq(T.argmax(predict, axis=-1), label))
+            elif label.ndim == 2:
+                return T.mean(T.eq(T.argmax(predict, axis=-1), T,argmax(label, axis=-1)))
+            else:
+                raise ValueError()
         else:
             # TODO: not yet tested
             top_k_predict = T.argsort(predict)[:, -self.top_k:]  # sort by values and keep top k indices
-            return T.mean(T.any(T.eq(top_k_predict, label), axis=-1))
+            if label.ndim == 1:
+                return T.mean(T.any(T.eq(top_k_predict, label), axis=-1))
+            elif label.ndim == 2:
+                return T.mean(T.any(T.eq(top_k_predict, T.argmax(label,axis=-1)), axis=-1))
+            raise ValueError()
 
 
 class SquareLoss(BaseObjective):

@@ -15,7 +15,6 @@ from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.graphs.graph import SimpleGraph
 from lemontree.layers.activation import ReLU, Softmax
-from lemontree.experimentals.gumbel_softmax import GumbelSoftmax
 from lemontree.layers.dense import DenseLayer
 from lemontree.layers.normalization import BatchNormalization1DLayer
 from lemontree.initializers import HeNormal
@@ -25,9 +24,13 @@ from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params
 from lemontree.utils.type_utils import merge_dicts
 from lemontree.utils.graph_utils import get_inputs_of_variables
+from lemontree.utils.data_utils import int_to_onehot
+
 
 np.random.seed(9999)
-base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+base_datapath = 'D:/Dropbox/Project/data/'
+# base_datapath = '/home/khshim/data/'
 experiment_name = 'mnist_mlp'
 
 #================Prepare data================#
@@ -38,12 +41,9 @@ train_data, train_label = mnist.get_fullbatch_train()
 test_data, test_label = mnist.get_fullbatch_test()
 valid_data, valid_label = mnist.get_fullbatch_valid()
 
-train_gen = SimpleGenerator('train', 250)
-train_gen.initialize(train_data, train_label)
-test_gen = SimpleGenerator('test', 250)
-test_gen.initialize(test_data, test_label)
-valid_gen = SimpleGenerator('valid', 250)
-valid_gen.initialize(valid_data, valid_label)
+train_gen = SimpleGenerator([train_data, train_label], 250, 'train')
+test_gen = SimpleGenerator([test_data, test_label], 250, 'test')
+valid_gen = SimpleGenerator([valid_data, valid_label], 250, 'valid')
 
 #================Build graph================#
 
@@ -88,8 +88,8 @@ total_updates = merge_dicts([optimizer_updates, graph_updates])
 params_saver = SimpleParameter(total_params, experiment_name + '_params/')
 params_saver.save_params()
 
-lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.2)
-hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
+lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.1)
+hist = HistoryWithEarlyStopping(experiment_name + '_history/', 7, 3)
 hist.add_keys(['train_accuracy',  'valid_accuracy', 'test_accuracy'])
 
 #================Compile functions================#
