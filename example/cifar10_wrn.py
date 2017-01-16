@@ -11,7 +11,7 @@ import theano
 import theano.tensor as T
 
 from lemontree.data.cifar10 import CIFAR10
-from lemontree.data.generators import SimpleGenerator
+from lemontree.data.generators import ImageGenerator
 from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.graphs.graph import SimpleGraph
@@ -44,9 +44,19 @@ train_data, train_label = cifar10.get_fullbatch_train()
 test_data, test_label = cifar10.get_fullbatch_test()
 valid_data, valid_label = cifar10.get_fullbatch_valid()
 
-train_gen = SimpleGenerator([train_data, train_label], 128, 'train')
-test_gen = SimpleGenerator([test_data, test_label], 128, 'test')
-valid_gen = SimpleGenerator([valid_data, valid_label], 128, 'valid')
+train_gen = ImageGenerator([train_data, train_label], 128,
+                          flip_lr=True, flip_ud=False, padding=(2,2,2,2), crop_size=(32,32), name='train')
+test_gen = ImageGenerator([test_data, test_label], 128,
+                          flip_lr=True, flip_ud=False, padding=(2,2,2,2), crop_size=(32,32), name='test')
+valid_gen = ImageGenerator([valid_data, valid_label], 128,
+                           flip_lr=True, flip_ud=False, padding=(2,2,2,2), crop_size=(32,32), name='valid')
+
+train_global_mean = train_gen.global_mean_sub()
+train_pc_matrix = train_gen.zca()
+test_gen.global_mean_sub(train_global_mean)
+test_gen.zca(train_pc_matrix)
+valid_gen.global_mean_sub(train_global_mean)
+valid_gen.zca(train_pc_matrix)
 
 #================Build graph================#
 

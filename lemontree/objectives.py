@@ -146,7 +146,7 @@ class CategoricalAccuracy(BaseObjective):
             if label.ndim == 1:
                 return T.mean(T.eq(T.argmax(predict, axis=-1), label))
             elif label.ndim == 2:
-                return T.mean(T.eq(T.argmax(predict, axis=-1), T,argmax(label, axis=-1)))
+                return T.mean(T.eq(T.argmax(predict, axis=-1), T.argmax(label, axis=-1)))
             else:
                 raise ValueError()
         else:
