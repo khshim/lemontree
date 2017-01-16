@@ -271,8 +271,6 @@ class HistoryWithEarlyStopping(SimpleHistory):
         # check asserts
         assert isinstance(max_patience, int), '"max_patience" should be a positive integer.'
         assert isinstance(max_change, int), '"max_change" should be a positive integer.'
-        assert isinstance(at_least, int), '"at_least" should be a positive integer.'
-
 
         # set members
         self.patience = 0  # current patience

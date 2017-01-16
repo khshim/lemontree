@@ -392,18 +392,18 @@ class ImageGenerator(SimpleGenerator):
 
         # make returns
         data = ()
-        index = 0
+        data_index = 0
         for dd in self.data_list:
-            if index == self.image_index:
+            if data_index == self.image_index:
                 image = dd[self.order[self.batch_size * index: self.batch_size * (index+1)]]
                 if self.flip_lr:
-                    random_choice = self.rng.permutation(self.batchsize)[:self.batchsize//2]
+                    random_choice = self.rng.permutation(self.batch_size)[:self.batch_size//2]
                     image[random_choice] = image[random_choice, :, :, ::-1]
                 if self.flip_ud:
-                    random_choice = self.rng.permutation(self.batchsize)[:self.batchsize//2]
+                    random_choice = self.rng.permutation(self.batch_size)[:self.batch_size//2]
                     image[random_choice] = image[random_choice, :, ::-1]
                 if self.padding is not None:
-                    image = np.pad(image, ((0,),(0,),(self.padding[0], self.padding[1]),(self.padding[2], self.padding[3])), mode='edge')
+                    image = np.pad(image, ((0,0),(0,0),(self.padding[0], self.padding[1]),(self.padding[2], self.padding[3])), mode='edge')
                 if self.crop_size is not None:
                     random_row = self.rng.randint(0, image.shape[2] - self.crop_size[0] + 1)
                     random_col = self.rng.randint(0, image.shape[3] - self.crop_size[1] + 1)
@@ -411,6 +411,8 @@ class ImageGenerator(SimpleGenerator):
                 data = data + (image,)
             else:
                 data = data + (dd[self.order[self.batch_size * index: self.batch_size * (index+1)]],)
+            data_index += 1
+        assert data_index == self.max_data
         return data
 
 
