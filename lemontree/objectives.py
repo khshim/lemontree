@@ -159,6 +159,114 @@ class CategoricalAccuracy(BaseObjective):
             raise ValueError()
 
 
+class BinaryCrossentropy(BaseObjective):
+
+    def __init__(self, stabilize=False, mode='mean'):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        stabilize: bool, default: False
+            a bool value to use stabilization or not.
+            if yes, predictions are clipped to small, nonnegative values to prevent NaNs.
+            the prediction slightly ignores the probability distribution assumtion of sum = 1.
+            for most cases, it is OK to use 'False'.
+            however, if you are using many-class such as imagenet, this option may matter.
+        mode: string {'mean', 'sum'}, default: 'mean'
+            a string to choose how to compute loss as a scalar.
+            'mean' computes loss as an average loss through (mini) batch.
+            'sum' computes loss as a sum loss through (mini) batch.
+
+        Returns
+        -------
+        None.
+        """
+        # check assert
+        assert isinstance(stabilize, bool), '"stabilize" should be a bool value.'
+        assert mode in ['mean', 'sum'], '"mode" should be either "mean" or "sum".'
+
+        # set members
+        self.tags = ['loss', 'binary_crossentropy']
+        self.stabilize = stabilize
+        self.mode = mode
+
+    def get_loss(self, predict, label):
+        """
+        This function overrides the parents' one.
+        Computes the loss by model prediction and real label.
+        use theano implemented binary_crossentropy directly.
+
+        Parameters
+        ----------
+        predict: ndarray
+            an array of (batch size, prediction).
+            for cross entropy task, "predict" is 2D matrix.
+        label: ndarray
+            an array of or (batchsize,) whose value is 0 or 1.
+
+        Returns
+        -------
+        TensorVariable
+            a symbolic tensor variable which is scalar.
+        """
+        # do
+        if self.mode == 'mean':
+            if self.stabilize:
+                return T.mean(T.nnet.binary_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), label))
+            else:
+                return T.mean(T.nnet.binary_crossentropy(predict, label))
+        elif self.mode == 'sum':
+            if self.stabilize:
+                return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), label))
+            else:
+                return T.sum(T.nnet.binary_crossentropy(predict, label))
+        else:
+            raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
+
+
+class BinaryAccuracy(BaseObjective):
+
+    def __init__(self):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        None.
+        """
+        # set members
+        self.tags = ['accuracy', 'binary_accuracy']
+
+    def get_loss(self, predict, label):
+        """
+        This function overrides the parents' one.
+        Computes the loss by model prediction and real label.
+
+        Parameters
+        ----------
+        predict: ndarray
+            an array of (batch size, prediction).
+            for accuracy task, "predict" is 2D matrix.
+        label: ndarray
+            an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
+            for classification, highly recommend second one.
+            should make label as integer.
+
+        Returns
+        -------
+        TensorVariable
+            a symbolic tensor variable which is scalar.
+        """
+        # do
+        # TODO: Not tested
+        return T.mean(T.eq(T.gt(predict, 0.5), label)) 
+
+
 class SquareLoss(BaseObjective):
 
     def __init__(self, mode='mean'):
