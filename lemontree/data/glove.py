@@ -63,7 +63,7 @@ class GloveData(object):
                 word = word_and_vector[0]
                 vector = word_and_vector[1:]
                 self.dict[word] = index
-                self.embedding.append(vector)
+                self.embedding.append(np.asarray(vector, dtype='float32'))
                 index += 1
         end_time= time.clock()
         self.vocabulary = len(self.embedding)
