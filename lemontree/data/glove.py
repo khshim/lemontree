@@ -128,7 +128,7 @@ class GloveData(object):
         index = 0
         for ww in words:  # preserve order
             if ww not in self.dict.keys():
-                key = self.vocabulary + 2  # <unk>
+                key = self.vocabulary  # <unk>
             else:
                 key = self.dict[ww]  # find index in dictionary
             words_indices.append(key)
