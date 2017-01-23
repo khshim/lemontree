@@ -119,7 +119,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         # order: forget, input, output, cell_candidate
         b = np.zeros((output_shape[0] * 4,)).astype(theano.config.floatX)
         if self.forget_bias_one:
-            b[:output_shape] = 1.0  # forget gate bias intialize to 1
+            b[:output_shape[0]] = 1.0  # forget gate bias intialize to 1
         self.b = theano.shared(b, self.name + '_bias')
         self.b.tags = ['bias', self.name]
 
