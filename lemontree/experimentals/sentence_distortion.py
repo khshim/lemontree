@@ -118,15 +118,44 @@ def sentence_distortion_insert_one(words, candidates):
     return words
 
 
+def sentence_distortion_swap_pair(words):
+    """
+    This function swaps two adjacent word pair.
+
+    Parameters
+    ----------
+    words: list
+        a list of words (or word indices).
+
+    Returns
+    -------
+    list
+        a list of new words, one word is missing.
+    """
+    # check asserts
+    assert isinstance(words, list), '"words" should be a list of words or word indices.'
+
+    # shuffle
+    num = len(words)
+    index = list(range(num))
+    for i in range(0, num-1, 2):
+        index[i] = i + 1
+        index[i+1] = i
+
+    return list(words[i] for i in index)
+
+
 if __name__ == '__main__':
-    words = ['a', 'cat', 'is', 'now', 'sleeping']
+    words = ['a', 'cat', 'is', 'now', 'sleeping', 'deeply']
     shuffle_one = sentence_distortion_shuffle_one(words)
     print(shuffle_one)
     delete_one = sentence_distortion_delete_one(words)
     print(delete_one)
-    base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-    glove = GloveData(base_datapath)
-    insert_one = sentence_distortion_insert_one(words, glove.dict.keys())
-    print(insert_one)
+    #base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+    #glove = GloveData(base_datapath)
+    #insert_one = sentence_distortion_insert_one(words, glove.dict.keys())
+    #print(insert_one)
     random_one = sentence_distortion_shuffle_random(words)
     print(random_one)
+    swap_one = sentence_distortion_swap_pair(words)
+    print(swap_one)

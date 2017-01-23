@@ -1,124 +1,12 @@
 """
-This code includes generators to make minibatch and shuffle.
+This code includes image generators to make minibatch and shuffle.
 Generator make data to feed into training function for every mini-batch.
 Each generator can hold multiple data, such as data and label.
+Image Generator preprocess image before training and during training.
 """
 
 import numpy as np
-
-
-class SimpleGenerator(object):
-    """
-    This class get tensor type data and load to RAM.
-    No special pre-processing included.
-    """
-    def __init__(self, data_list, batch_size=128, name=None, seed=333):
-        """
-        This function initializes the class.
-
-        Parameters
-        ----------
-        data_list: list
-            a list of data, each include equal number of data.
-        name: string
-            a string name of the class.
-        seed: int
-            an integer value of numpy random generator.
-        batch_size: int
-            an integer value, which is the number of data in mini-batch.
-
-        Returns
-        -------
-        None.
-        """
-        # check asserts
-        assert isinstance(data_list, list), '"data_list" should be a list of data.'
-        assert isinstance(batch_size, int), '"batch_size" should be an integer.'
-        assert isinstance(seed, int), '"seed" should be an integer value.'
-        
-        # set members
-        self.data_list = data_list
-        self.max_data = len(data_list)  # how many data included in input
-        self.name = name
-        self.batch_size = batch_size
-        self.rng = np.random.RandomState(seed)
-
-        # all data should have same data
-        self.ndata = len(data_list[0])  # first data, the number of data
-        for dd in self.data_list:
-            assert self.ndata == len(dd), 'All data in "data_list" should have same number of data.'
-        self.order = self.rng.permutation(self.ndata)
-        self.max_index = self.ndata // self.batch_size
-
-    def shuffle(self):
-        """
-        This function shuffles the order of data.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
-        """
-        self.order = self.rng.permutation(self.ndata)
-
-    def change_batchsize(self, new_batch_size):
-        """
-        This function changes the initial batch size of the class.
-
-        Parameters
-        ----------
-        new_batch_size: int
-            an integer value which will replace the previous batch size.
-
-        Returns
-        -------
-        None.
-        """
-        # check asserts
-        assert isinstance(new_batch_size, int), '"new_batch_size" should be an integer.'
-
-        self.batch_size = new_batch_size
-        self.max_index = self.ndata // self.batch_size
-
-    def get_minibatch(self, index):
-        """
-        This function generates the mini batch data.
-        Only crop the data and return.
-
-        Parameters
-        ----------
-        index: int
-            an integer value that indicates which mini batch will be returned.
-
-        Returns
-        -------
-        None.
-        """
-        # check asserts
-        assert index <= self.max_index, '"index" should be below maximum index.'
-
-        # make returns
-        data = ()
-        for dd in self.data_list:
-            data = data + (dd[self.order[self.batch_size * index: self.batch_size * (index+1)]],)
-        return data
-
-    def get_fullbatch(self):
-        """
-        This function just return all data inside, as tuple type.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
-        """
-        return tuple(self.data_list)
+from lemontree.generators.generator import SimpleGenerator
 
 
 class ImageGenerator(SimpleGenerator):
@@ -130,7 +18,7 @@ class ImageGenerator(SimpleGenerator):
     """
     def __init__(self, data_list, batch_size=128,
                  flip_lr=False, flip_ud=False, padding=None, crop_size=None,
-                 image_index=0, name=None, seed=333):
+                 image_index=0, name=None, seed=334):
         """
         This function initializes the class.
         Preprocessing is different to random generation.
@@ -414,32 +302,3 @@ class ImageGenerator(SimpleGenerator):
             data_index += 1
         assert data_index == self.max_data
         return data
-
-
-class SequenceGenerator(SimpleGenerator):
-
-    def __init__(self, name=None, batchsize=128, sequence_length=50):
-        super(SequenceGenerator, self).__init__(name, batchsize)
-        self.sequence_length = sequence_length
-
-    def initialize(self, data, label):
-        self.data = []
-        for i in range(len(data) // (self.batchsize * self.sequence_length)):
-            self.data.append
-        
-    #def initialize(self, data, sort=False):
-    #    if sort:
-    #        self.data = sorted(data, key=len)  # list of sentences (strings)
-    #    else:
-    #        self.data = data
-    #    self.ndata = len(data)
-        
-    #    if self.bucket > 0:
-    #        assert sort  # To use bucketing, we should sort sentences
-    #        self.bucket_key = []
-    #        for ind in range(self.ndata // self.bucket, self.ndata, self.ndata // self.bucket):
-    #            self.bucket_key.append(len(self.data[ind]))
-    #        self.bucket_key = self.bucket_key[:self.bucket-1]
-
-
-

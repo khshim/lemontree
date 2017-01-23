@@ -10,7 +10,7 @@ import theano
 import theano.tensor as T
 
 from lemontree.data.mnist import MNIST
-from lemontree.data.generators import SimpleGenerator
+from lemontree.generators.generator import SimpleGenerator
 from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.graphs.graph import SimpleGraph
@@ -25,7 +25,6 @@ from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_par
 from lemontree.utils.type_utils import merge_dicts
 from lemontree.utils.graph_utils import get_inputs_of_variables
 from lemontree.utils.data_utils import int_to_onehot
-
 
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
@@ -79,8 +78,8 @@ HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_tags_in_params(graph_params)
 
 optimizer = Adam(0.002)
-optimizer_params = optimizer.get_params()
 optimizer_updates = optimizer.get_updates(loss, graph_params)
+optimizer_params = optimizer.get_params()
 
 total_params = optimizer_params + graph_params
 total_updates = merge_dicts([optimizer_updates, graph_updates])
@@ -89,7 +88,7 @@ params_saver = SimpleParameter(total_params, experiment_name + '_params/')
 params_saver.save_params()
 
 lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.1)
-hist = HistoryWithEarlyStopping(experiment_name + '_history/', 7, 3)
+hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
 hist.add_keys(['train_accuracy',  'valid_accuracy', 'test_accuracy'])
 
 #================Compile functions================#
@@ -155,7 +154,7 @@ for epoch in range(1000):
     if change_lr:
         params_saver.load_params()
         lr_scheduler.change_learningrate(epoch)
-        optimizer.reset_params()
+        # optimizer.reset_params()
     train_gen.shuffle()
 
     print('...Epoch', epoch)
@@ -188,6 +187,8 @@ for epoch in range(1000):
 #================Test================#
 
 test_testset()
-hist.print_history_of_epoch()
+best_loss, best_epoch = hist.best_loss_and_epoch_of_key('valid_loss')
+hist.print_history_of_epoch(best_epoch, ['train_loss', 'train_accuracy', 'valid_loss', 'valid_accuracy'])
+hist.print_history_of_epoch(-1, ['test_loss', 'test_accuracy'])
 hist.save_history_to_csv()
 

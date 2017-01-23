@@ -11,7 +11,7 @@ import theano
 import theano.tensor as T
 
 from lemontree.data.cifar10 import CIFAR10
-from lemontree.data.generators import ImageGenerator
+from lemontree.generators.image import ImageGenerator
 from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.graphs.graph import SimpleGraph
@@ -60,7 +60,7 @@ valid_gen.zca(train_pc_matrix)
 
 #================Build graph================#
 
-x = T.ftensor4('X')
+x = T.ftensor4('x')
 y = T.ivector('y')
 
 graph = SimpleGraph(experiment_name)
@@ -163,14 +163,15 @@ HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_tags_in_params(graph_params)
 
 optimizer = Adam(0.002)
-optimizer_params = optimizer.get_params()
 optimizer_updates = optimizer.get_updates(loss, graph_params)
+optimizer_params = optimizer.get_params()
 
 total_params = optimizer_params + graph_params
 total_updates = merge_dicts([optimizer_updates, graph_updates])
 
 params_saver = SimpleParameter(total_params, experiment_name + '_params/')
-params_saver.save_params()
+# params_saver.save_params()
+params_saver.load_params()
 
 lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.2)
 hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
@@ -189,6 +190,11 @@ train_func = theano.function(inputs=graph_inputs,
 test_func = theano.function(inputs=graph_inputs,
                             outputs=outputs,
                             allow_input_downcast=True)
+
+test_func_output = theano.function(inputs=[x],
+                                   outputs=graph.get_output(),
+                                   allow_input_downcast=True)
+
 
 #================Convenient functions================#
 
@@ -271,6 +277,7 @@ for epoch in range(1000):
 
 #================Test================#
 
-test_testset()
-hist.print_history_of_epoch()
+best_loss, best_epoch = hist.best_loss_and_epoch_of_key('valid_loss')
+hist.print_history_of_epoch(best_epoch, ['train_loss', 'train_accuracy', 'valid_loss', 'valid_accuracy'])
+hist.print_history_of_epoch(-1, ['test_loss', 'test_accuracy'])
 hist.save_history_to_csv()

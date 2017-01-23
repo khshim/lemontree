@@ -121,7 +121,8 @@ class SimpleHistory(object):
 
         Returns
         -------
-        None
+        tuple
+            a tuple of (best_loss, best_epoch).
         """
         # check asserts
         assert isinstance(key, str), '"key" should be a string which indicates history key.'
@@ -129,7 +130,7 @@ class SimpleHistory(object):
 
         # find best
         best_loss = np.asarray(self.history[key])
-        return np.min(best_loss), np.argmin(best_loss)  # loss, epoch order
+        return np.min(best_loss), np.int(np.argmin(best_loss))  # loss, epoch order
 
     def remove_history_after_epoch(self, epoch, erase_keys=None):
         """
@@ -194,7 +195,7 @@ class SimpleHistory(object):
                 if len(self.history[key]) != 0:
                     print('......', key, self.history[key][epoch])
         else:
-            for key in keylist:
+            for key in print_keys:
                 if len(self.history[key]) != 0:
                     print('......', key, self.history[key][epoch])
     
@@ -301,7 +302,7 @@ class HistoryWithEarlyStopping(SimpleHistory):
         current_value = self.history[key][-1]  # added just before
         current_best_value, current_best_epoch = self.best_loss_and_epoch_of_key(key)
 
-        if current_best_value < current_value:  # something wrong
+        if current_best_value <= current_value:  # something wrong
             self.patience += 1  # increase patience
             print('...... current patience', self.patience)
             print('...... current best value of', key, current_best_value)
