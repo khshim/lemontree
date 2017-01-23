@@ -13,6 +13,7 @@ Additional folder structure: '~~~/data/glove/glove.6B.300d.txt'
 """
 
 import time
+import pickle
 import numpy as np
 
 
@@ -20,7 +21,7 @@ class GloveData(object):
     """
     This class use glove word vector set to make word embeddings.
     """
-    def __init__(self, base_datapath, mode='6B.300d', seed=33):
+    def __init__(self, base_datapath, mode='6B.300d', seed=33, load_pickle=False):
         """
         This function initializes the class.
         Initialization contains loading and parsing of glove data.
@@ -38,6 +39,8 @@ class GloveData(object):
             i.e., 'glove.6B.300d.txt'.
         seed: int
             an integer to randomly generate eos, sos, unk tokens.
+        load_pickle: bool, default: False
+            a bool value to load precomputed embedding and dictionary.
 
         Returns
         -------
@@ -46,46 +49,60 @@ class GloveData(object):
         # check asserts
         assert isinstance(base_datapath, str), '"base_datapath" should be a string path.'
         assert isinstance(mode, str), '"mode" should be a string name for glove word vector.'
-
+        assert isinstance(load_pickle, bool), '"load_pickle" should be a bool value.'
+        
         # load
-        glove_file = base_datapath + 'glove/glove.' + mode + '.txt'
-        print('Glove load file:', glove_file)
-        self.dict = {}
-        self.embedding = []
-        index = 0
         start_time = time.clock()
-        with open(glove_file, 'r', encoding='utf-8') as f:
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                word_and_vector = line.replace('\n', '').split(' ')
-                word = word_and_vector[0]
-                vector = word_and_vector[1:]
-                self.dict[word] = index
-                self.embedding.append(np.asarray(vector, dtype='float32'))
-                index += 1
+        if load_pickle:
+            dict_file = base_datapath + 'glove/glove.' + mode + '_dict.pickle'
+            print('Glove dict load file:', dict_file)
+            with open(dict_file, 'rb') as f:
+                self.dict = pickle.load(f)
+
+            embedding_file = base_datapath + 'glove/glove.' + mode + '_embedding.pickle'
+            print('Glove embedding load file:', embedding_file)
+            with open(embedding_file, 'rb') as f:
+                self.embedding = pickle.load(f)
+            self.vocabulary = self.embedding.shape[0]
+            self.dimension = self.embedding.shape[1]
+        else:
+            glove_file = base_datapath + 'glove/glove.' + mode + '.txt'
+            print('Glove load file:', glove_file)
+            self.dict = {}
+            self.embedding = []
+            index = 0            
+            with open(glove_file, 'r', encoding='utf-8') as f:
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    word_and_vector = line.replace('\n', '').split(' ')
+                    word = word_and_vector[0]
+                    vector = word_and_vector[1:]
+                    self.dict[word] = index
+                    self.embedding.append(vector)
+                    index += 1            
+            
+            self.dimension = len(self.embedding[0])
+            # set <eos>, <sos>, <unk> vector.
+            rng = np.random.RandomState(seed)
+            eos_vector = rng.uniform(-1, 1, (self.dimension,))
+            sos_vector = rng.uniform(-1, 1, (self.dimension,))
+            unk_vector = rng.uniform(-1, 1, (self.dimension,))
+            self.dict['<EOS>'] = index
+            self.dict['<SOS>'] = index + 1
+            self.dict['<UNK>'] = index + 2
+            self.embedding.append(eos_vector)
+            self.embedding.append(sos_vector)
+            self.embedding.append(unk_vector)
+            # convert to numpy
+            self.embedding = np.asarray(self.embedding, dtype='float32')  # move list to a single numpy array.
+            self.vocabulary = len(self.embedding)
+
         end_time= time.clock()
-        self.vocabulary = len(self.embedding)
-        self.dimension = len(self.embedding[0])
-
-        # set <eos>, <sos>, <unk> vector.
-        rng = np.random.RandomState(seed)
-        eos_vector = rng.uniform(-1, 1, (self.dimension,))
-        sos_vector = rng.uniform(-1, 1, (self.dimension,))
-        unk_vector = rng.uniform(-1, 1, (self.dimension,))
-        self.dict['<EOS>'] = index
-        self.dict['<SOS>'] = index + 1
-        self.dict['<UNK>'] = index + 2
-        self.embedding.append(eos_vector)
-        self.embedding.append(sos_vector)
-        self.embedding.append(unk_vector)
-
-        # convert to numpy
-        self.embedding = np.asarray(self.embedding, dtype='float32')  # move list to a single numpy array.
         print('Glove load time:', end_time - start_time)
         print('Glove data shape:', self.embedding.shape)     
-        print('Glove total vocabulary:', self.vocabulary)
+        # print('Glove total vocabulary:', self.vocabulary)
 
     def words_to_indices(self, words):
         """
