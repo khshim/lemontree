@@ -328,7 +328,7 @@ class LayerNormalization1DLayer(BaseLayer):
     def get_output(self, input):
         dim_mean = T.mean(input, axis=1)
         dim_std = T.std(input, axis=1)
-        return self.gamma * (input - dim_mean.dimshuffle(0, 'x')) / (dim_std.dimshuffle(0, 'x') + 1e-8) + self.beta
+        return self.gamma * (input - dim_mean.dimshuffle(0, 'x')) / (dim_std.dimshuffle(0, 'x') + 1e-7) + self.beta
 
     def get_params(self):
         return [self.gamma, self.beta]
@@ -354,7 +354,7 @@ class LayerNormalization2DLayer(BaseLayer):
     def get_output(self, input):
         dim_mean = T.mean(input, axis=[1, 2, 3])
         dim_std = T.std(input, axis=[1, 2, 3])
-        return self.gamma.dimshuffle('x', 0, 'x', 'x') * (input - dim_mean.dimshuffle(0, 'x', 'x', 'x')) / (dim_std.dimshuffle(0, 'x', 'x', 'x') + 1e-8) + self.beta.dimshuffle('x', 0, 'x', 'x')
+        return self.gamma.dimshuffle('x', 0, 'x', 'x') * (input - dim_mean.dimshuffle(0, 'x', 'x', 'x')) / (dim_std.dimshuffle(0, 'x', 'x', 'x') + 1e-7) + self.beta.dimshuffle('x', 0, 'x', 'x')
 
     def get_params(self):
         return [self.gamma, self.beta]

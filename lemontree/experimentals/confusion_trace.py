@@ -58,5 +58,5 @@ class ConfusionTrace(BaseObjective):
         
         confusion = T.dot(T.transpose(one_hot_label), one_hot_predict)
         confusion_sum = T.sum(confusion, axis = 1)
-        confusion_norm = confusion / (confusion_sum.dimshuffle(0,'x') + 1e-8)
+        confusion_norm = confusion / (confusion_sum.dimshuffle(0,'x') + 1e-7)
         return T.nlinalg.trace(confusion_norm)

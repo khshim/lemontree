@@ -103,7 +103,7 @@ class BaseOptimizer(object):
         grads = T.grad(loss, params)
         if self.clipnorm is not None:
             grad_l2norm = T.sqrt(sum([T.sum(T.square(gg)) for gg in grads]))
-            grads = [T.switch(grad_l2norm > self.clipnorm, g * self.clipnorm / (grad_l2norm + 1e-8), g) for g in grads]
+            grads = [T.switch(grad_l2norm > self.clipnorm, g * self.clipnorm / (grad_l2norm + 1e-7), g) for g in grads]
         if self.clipvalue is not None:
             grads = [T.clip(g, -self.clipvalue, self.clipvalue) for g in grads]
         return grads
@@ -269,7 +269,7 @@ class RMSprop(BaseOptimizer):
             self.accu.tags = ['optimizer_param']
             accu_new = self.rho * self.accu + (1 - self.rho) * T.sqr(gg)
             updates[self.accu] = accu_new
-            updates[pp] = pp - (self.lr * gg / (T.sqrt(accu_new) + 1e-8))
+            updates[pp] = pp - (self.lr * gg / (T.sqrt(accu_new) + 1e-7))
         return updates
 
 
@@ -294,7 +294,7 @@ class AdaDelta(BaseOptimizer):
             self.delta_accu.tags = ['optimizer_param']
             accu_new = self.rho * self.accu + (1 - self.rho) * T.sqr(gg)
             updates[self.accu] = accu_new
-            ud = gg * (T.sqrt(self.delta_accu) + 1e-8) / (T.sqrt(accu_new) + 1e-8)
+            ud = gg * (T.sqrt(self.delta_accu) + 1e-7) / (T.sqrt(accu_new) + 1e-7)
             updates[pp] = pp - self.lr * ud
             delta_accu_new = self.rho * self.delta_accu + (1 - self.rho) * T.sqr(ud)
             updates[self.delta_accu] = delta_accu_new
@@ -332,7 +332,7 @@ class Adam(BaseOptimizer):
             self.v.tags = ['optimizer_param']
             m_t = (self.beta1 * self.m) + ((1.0 - self.beta1) * gg)
             v_t = (self.beta2 * self.v) + ((1.0 - self.beta2) * T.sqr(gg))
-            g_t = m_t / (T.sqrt(v_t) + 1e-8)
+            g_t = m_t / (T.sqrt(v_t) + 1e-7)
             p_t = pp - (lr_t * g_t)
             updates[self.m] = m_t
             updates[self.v] = v_t

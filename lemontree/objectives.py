@@ -86,12 +86,12 @@ class CategoricalCrossentropy(BaseObjective):
         # do
         if self.mode == 'mean':
             if self.stabilize:
-                return T.mean(T.nnet.categorical_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), label))
+                return T.mean(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
             else:
                 return T.mean(T.nnet.categorical_crossentropy(predict, label))
         elif self.mode == 'sum':
             if self.stabilize:
-                return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), label))
+                return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
             else:
                 return T.sum(T.nnet.categorical_crossentropy(predict, label))
         else:
@@ -213,12 +213,12 @@ class BinaryCrossentropy(BaseObjective):
         # do
         if self.mode == 'mean':
             if self.stabilize:
-                return T.mean(T.nnet.binary_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), label))
+                return T.mean(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
             else:
                 return T.mean(T.nnet.binary_crossentropy(predict, label))
         elif self.mode == 'sum':
             if self.stabilize:
-                return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), label))
+                return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
             else:
                 return T.sum(T.nnet.binary_crossentropy(predict, label))
         else:

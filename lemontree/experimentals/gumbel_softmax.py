@@ -82,7 +82,7 @@ class GumbelSoftmax(BaseLayer):
         """
         # generate random gumbel distribution
         gumbel_random = self.rng.uniform(input_.shape, 0, 1)
-        gumbel_noise= -T.log(-T.log(gumbel_random + 1e-8) + 1e-8)
+        gumbel_noise= -T.log(-T.log(gumbel_random + 1e-7) + 1e-7)
         return T.nnet.softmax((input_ + gumbel_noise) / self.temperature)  # divide by temperature
 
 
@@ -168,17 +168,17 @@ class GumbelCategoricalCrossentropy(BaseObjective):
             a symbolic tensor variable which is scalar.
         """
         gumbel_random = self.rng.uniform(label.shape, 0, 1)
-        gumbel_noise= -T.log(-T.log(gumbel_random + 1e-8) + 1e-8)
+        gumbel_noise= -T.log(-T.log(gumbel_random + 1e-7) + 1e-7)
         gumbel_label = T.nnet.softmax((label + gumbel_noise) / self.temperature)
         # do
         if self.mode == 'mean':
             if self.stabilize:
-                return T.mean(T.nnet.categorical_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), gumbel_label))
+                return T.mean(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), gumbel_label))
             else:
                 return T.mean(T.nnet.categorical_crossentropy(predict, gumbel_label))
         elif self.mode == 'sum':
             if self.stabilize:
-                return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-8, 1.0 - 1e-8), gumbel_label))
+                return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), gumbel_label))
             else:
                 return T.sum(T.nnet.categorical_crossentropy(predict, gumbel_label))
         else:

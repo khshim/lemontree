@@ -151,7 +151,7 @@ class ImageGenerator(SimpleGenerator):
         image = self.data_list[self.image_index]
         if std is None:
             std = np.std(image, axis = 0)  # compute std through batch dimension
-        result = image / (std + 1e-8)
+        result = image / (std + 1e-7)
         self.data_list[self.image_index] = result
         return std
 
@@ -211,7 +211,7 @@ class ImageGenerator(SimpleGenerator):
         image = self.data_list[self.image_index]
         flat = np.reshape(image, (image.shape[0], np.prod(image.shape[1:])))
         std = np.std(flat, axis=-1)
-        flat = flat / (std[:, np.newaxis] + 1e-8)
+        flat = flat / (std[:, np.newaxis] + 1e-7)
         result = np.reshape(flat, image.shape)
         self.data_list[self.image_index] = result
 
@@ -252,7 +252,7 @@ class ImageGenerator(SimpleGenerator):
         if pc_matrix is None:
             sigma = np.dot(flat.T, flat) / flat.shape[0]
             U, S, V = np.linalg.svd(sigma)
-            newS = np.diag(1.0 / (np.sqrt(S) + 1e-8))
+            newS = np.diag(1.0 / (np.sqrt(S) + 1e-7))
             pc_matrix = np.dot(np.dot(U, newS), np.transpose(U))
 
         white = np.dot(flat, pc_matrix)
