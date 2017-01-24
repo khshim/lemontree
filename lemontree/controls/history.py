@@ -302,7 +302,7 @@ class HistoryWithEarlyStopping(SimpleHistory):
         current_value = self.history[key][-1]  # added just before
         current_best_value, current_best_epoch = self.best_loss_and_epoch_of_key(key)
 
-        if current_best_value <= current_value:  # something wrong
+        if current_best_value < current_value:  # something wrong
             self.patience += 1  # increase patience
             print('...... current patience', self.patience)
             print('...... current best value of', key, current_best_value)
