@@ -273,7 +273,8 @@ class ImageGenerator(SimpleGenerator):
 
         Returns
         -------
-        None.
+        tuple
+            a tuple of partial data in data list.
         """
         # check asserts
         assert index <= self.max_index, '"index" should be below maximum index.'

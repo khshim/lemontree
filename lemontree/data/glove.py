@@ -21,7 +21,7 @@ class GloveData(object):
     """
     This class use glove word vector set to make word embeddings.
     """
-    def __init__(self, base_datapath, mode='6B.300d', seed=33, load_pickle=False):
+    def __init__(self, base_datapath, mode='6B.300d', seed=33, load_pickle=True):
         """
         This function initializes the class.
         Initialization contains loading and parsing of glove data.
@@ -84,6 +84,7 @@ class GloveData(object):
                     index += 1            
             
             self.dimension = len(self.embedding[0])
+            
             # set <eos>, <sos>, <unk> vector.
             rng = np.random.RandomState(seed)
             eos_vector = rng.uniform(-1, 1, (self.dimension,))
@@ -95,14 +96,25 @@ class GloveData(object):
             self.embedding.append(eos_vector)
             self.embedding.append(sos_vector)
             self.embedding.append(unk_vector)
+            
             # convert to numpy
             self.embedding = np.asarray(self.embedding, dtype='float32')  # move list to a single numpy array.
             self.vocabulary = len(self.embedding)
+            
+            # save pickle dump
+            dict_file = base_datapath + 'glove/glove.' + mode + '_dict.pickle'
+            print('Glove dict load file:', dict_file)
+            with open(dict_file, 'wb') as f:
+                pickle.dump(self.dict, f, protocol=pickle.HIGHEST_PROTOCOL)
+            embedding_file = base_datapath + 'glove/glove.' + mode + '_embedding.pickle'
+            print('Glove embedding load file:', embedding_file)
+            with open(embedding_file, 'wb') as f:
+                pickle.dump(self.embedding, f, protocol=pickle.HIGHEST_PROTOCOL)
 
         end_time= time.clock()
         print('Glove load time:', end_time - start_time)
         print('Glove data shape:', self.embedding.shape)     
-        # print('Glove total vocabulary:', self.vocabulary)
+        print('Glove total vocabulary:', self.vocabulary)
 
     def words_to_indices(self, words):
         """

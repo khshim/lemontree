@@ -15,7 +15,7 @@ import time
 import numpy as np
 
 
-class GutenbergWordData(object):
+class GutenbergWordCorpus(object):
     """
     This class use gutenberg book text to make better tensor form.
     Word level sequence pre-processing.
