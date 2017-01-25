@@ -14,7 +14,7 @@ class DenseLayer(BaseLayer):
     """
     This class implements dense layer connection.
     """
-    def __init__(self, input_shape, output_shape, use_bias=True, name=None):
+    def __init__(self, input_shape, output_shape, use_bias=True, target_cpu=False, name=None):
         """
         This function initializes the class.
         Input is 2D tensor, output is 2D tensor.
@@ -28,6 +28,8 @@ class DenseLayer(BaseLayer):
             a tuple of single value, i.e., (output dim,)
         use_bias: bool, default: True
             a bool value whether we use bias or not.
+        target_cpu: bool, default: False
+            a bool value whether shared variable will be on cpu or gpu.
         name: string
             a string name of this layer.
 
@@ -40,11 +42,13 @@ class DenseLayer(BaseLayer):
         assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple with single value.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'
         assert isinstance(use_bias, bool), '"use_bias" should be a bool value.'
+        assert isinstance(target_cpu, bool), '"target_cpu" should be a bool value.'
 
         # set members
         self.input_shape = input_shape
         self.output_shape = output_shape
         self.use_bias = use_bias
+        self.target_cpu = target_cpu
 
         # create shared variables
         """
@@ -56,10 +60,16 @@ class DenseLayer(BaseLayer):
             shape is (output dim,).
         """
         W = np.zeros((input_shape[0], output_shape[0])).astype(theano.config.floatX)  # weight matrix
-        self.W = theano.shared(W, self.name + '_weight')
+        if target_cpu:
+            self.W = theano.shared(W, self.name + '_weight', target='cpu')
+        else:
+            self.W = theano.shared(W, self.name + '_weight')
         self.W.tags = ['weight', self.name]
         b = np.zeros(output_shape).astype(theano.config.floatX)  # bias vector, initialize with 0.
-        self.b = theano.shared(b, self.name + '_bias')
+        if target_cpu:
+            self.b = theano.shared(b, self.name + '_bias', target='cpu')
+        else:
+            self.b = theano.shared(b, self.name + '_bias')
         self.b.tags = ['bias', self.name]
 
     def get_output(self, input_):
