@@ -13,6 +13,7 @@ First, preprocess bookcorpus to make pickle.
 Second, load it to class.
 """
 
+import time
 import pickle
 import numpy as np
 from lemontree.data.dataset import BaseDataset
@@ -148,3 +149,10 @@ class BookCorpusWordCorpus(BaseDataset):
         self.valid_data = valid_data
 
         self.valid_exist = True
+
+
+if __name__ == '__main__':
+    base_datapath = '/home/khshim/data/'
+    glove = GloveData(base_datapath)
+    read_bookcorpus(base_datapath, glove, 'books_large_p1', 100000, 2, 20, 9685)
+    read_bookcorpus(base_datapath, glove, 'books_large_p2', 100000, 2, 20, 9686)
