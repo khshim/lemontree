@@ -16,7 +16,6 @@ from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.graphs.graph import SimpleGraph
 from lemontree.layers.activation import ReLU, Softmax
-from lemontree.experimentals.gumbel_softmax import GumbelSoftmax
 from lemontree.layers.convolution import Convolution3DLayer
 from lemontree.layers.pool import Pooling3DLayer, GlobalAveragePooling3DLayer
 from lemontree.layers.dense import DenseLayer

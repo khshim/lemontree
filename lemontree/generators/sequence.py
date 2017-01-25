@@ -88,7 +88,7 @@ class GloVeWordLMGenerator(SimpleGenerator):
         # prepare minibatch
         minibatch = [self.data_list[0][i] for i in self.order[self.batch_size * index: self.batch_size * (index+1)]]
         for k in self.preserved_data.keys():
-            minibatch[i] = self.preserved_data[k]  # replace if data should be processed continuously
+            minibatch[k] = self.preserved_data[k]  # replace if data should be processed continuously
         next_preserved_data = {}
 
         mask = np.ones((self.batch_size, self.sequence_length), dtype = 'int32')

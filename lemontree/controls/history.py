@@ -108,7 +108,7 @@ class SimpleHistory(object):
         assert isinstance(keys, list), '"keys" should be a list of string keys.'
         print('Keys in history:', self.history.keys())
 
-    def best_loss_and_epoch_of_key(self, key='valid_loss'):
+    def best_loss_and_epoch_of_key(self, key='valid_loss', mode='min'):
         """
         This function returns best (minimal) valid loss and which epoch it happened.
         Convenient function to get best result through history.
@@ -118,6 +118,8 @@ class SimpleHistory(object):
         key: string, default: 'valid_loss'
             a string which is already in key list.
             usually 'valid_loss' is of interest because of early stopping.
+        mode: string, default: 'min'
+            a string in {'min', 'max'}, whether the key value is maximized or minimized.
 
         Returns
         -------
@@ -127,10 +129,14 @@ class SimpleHistory(object):
         # check asserts
         assert isinstance(key, str), '"key" should be a string which indicates history key.'
         assert key in self.history.keys(), '"key" should be given as already existing history key.'
+        assert mode in ['min', 'max'], '"mode" should be either "min" or "max".'
 
         # find best
         best_loss = np.asarray(self.history[key])
-        return np.min(best_loss), np.int(np.argmin(best_loss))  # loss, epoch order
+        if mode == 'min':
+            return np.min(best_loss), np.int(np.argmin(best_loss))  # loss, epoch order
+        else:
+            return np.max(best_loss), np.int(np.argmax(best_loss))  # loss, epoch order
 
     def remove_history_after_epoch(self, epoch, erase_keys=None):
         """
@@ -279,7 +285,7 @@ class HistoryWithEarlyStopping(SimpleHistory):
         self.max_patience = max_patience
         self.max_change = max_change
 
-    def check_earlystopping(self, key='valid_loss'):
+    def check_earlystopping(self, key='valid_loss', mode='min'):
         """
         This function check whether early stopping should happen or not.
         Also determines when to stop training.
@@ -289,6 +295,8 @@ class HistoryWithEarlyStopping(SimpleHistory):
         ----------
         key: string
             a string key in history to monitor and control training.
+        mode: string, default: 'min'
+            a string in {'min', 'max'}, whether the key value is maximized or minimized.
 
         Returns
         -------
@@ -297,10 +305,11 @@ class HistoryWithEarlyStopping(SimpleHistory):
         # check asserts
         assert isinstance(key, str), '"key" should be a string which indicates history key.'
         assert key in self.history.keys(), '"key" should be given as already existing history key.'
+        assert mode in ['min', 'max'], '"mode" should be either "min" or "max".'
 
         # check conditions
         current_value = self.history[key][-1]  # added just before
-        current_best_value, current_best_epoch = self.best_loss_and_epoch_of_key(key)
+        current_best_value, current_best_epoch = self.best_loss_and_epoch_of_key(key, mode)
 
         if current_best_value < current_value:  # something wrong
             self.patience += 1  # increase patience
