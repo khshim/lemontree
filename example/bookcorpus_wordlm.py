@@ -19,7 +19,7 @@ from lemontree.layers.activation import ReLU, Softmax
 from lemontree.layers.dense import DenseLayer
 from lemontree.layers.lstm import LSTMRecurrentLayer
 from lemontree.initializers import GlorotNormal
-from lemontree.objectives import CategoricalCrossentropy, CategoricalAccuracy
+from lemontree.objectives import CategoricalCrossentropy, CategoricalAccuracy, WordPerplexity
 from lemontree.optimizers import RMSprop
 from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params
@@ -89,6 +89,7 @@ mask = T.reshape(m, (m.shape[0] * m.shape[1],))  # (batch_size * sequence_length
 
 loss = CategoricalCrossentropy(True).get_loss(output, label, mask)
 accuracy = CategoricalAccuracy().get_loss(output, label, mask)
+perplexity = WordPerplexity().get_loss(output, label, mask)
 
 graph_params = lstm.get_params() + dense.get_params()
 
@@ -110,10 +111,11 @@ params_saver.save_params()
 lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.2)
 hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
 hist.add_keys(['train_accuracy', 'valid_accuracy', 'test_accuracy'])
+hist.add_keys(['train_perplexity', 'valid_perplexity', 'test_perplexity'])
 
 #================Compile functions================#
 
-outputs = [loss, accuracy]
+outputs = [loss, accuracy, perplexity]
 graph_inputs = get_inputs_of_variables(outputs)
 
 train_func = theano.function(inputs=graph_inputs,
@@ -137,20 +139,23 @@ hidden_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
 def train_trainset():
     train_loss = []
     train_accuracy = []
+    train_perplexity = []
     start_time = time.clock()
     batch_cell_init = cell_init
     batch_hidden_init = hidden_init
     for index in range(train_gen.max_index):
         # run minibatch
         trainset = train_gen.get_minibatch(index)  # data, mask, label, reset
-        train_batch_loss, train_batch_accuracy = train_func(trainset[0], trainset[1], batch_cell_init, batch_hidden_init, trainset[2])
+        train_batch_loss, train_batch_accuracy, train_batch_perplexity = train_func(trainset[0], trainset[1], batch_cell_init, batch_hidden_init, trainset[2])
         train_loss.append(train_batch_loss)
         train_accuracy.append(train_batch_accuracy)
+        train_perplexity.append(train_batch_perplexity)
         if index % 100 == 0 and index != 0:
             current_time = time.clock()
             print('......... minibatch index', index, 'of total index', train_gen.max_index)
             print('............ minibatch x 100 loss',  np.mean(np.asarray(train_loss[-100:])))  # only 100, 200... th loss
             print('............ minibatch x 100 accuracy', np.mean(np.asarray(train_accuracy[-100:])))  # only 100, 200... th loss
+            print('............ minibatch x 100 perplexity', np.mean(np.asarray(train_perplexity[-100:])))  # only 100, 200... th loss
             print('......... minibatch x 100 time', current_time - start_time)
             start_time = current_time
         
@@ -161,19 +166,22 @@ def train_trainset():
 
     hist.history['train_loss'].append(np.mean(np.asarray(train_loss)))
     hist.history['train_accuracy'].append(np.mean(np.asarray(train_accuracy)))
+    hist.history['train_perplexity'].append(np.mean(np.asarray(train_perplexity)))
 
 def test_validset():
     valid_loss = []
     valid_accuracy = []
+    valid_perplexity = []
     start_time = time.clock()
     batch_cell_init = cell_init
     batch_hidden_init = hidden_init
     for index in range(valid_gen.max_index):
         # run minibatch
         validset = valid_gen.get_minibatch(index)  # data, mask, label, reset
-        valid_batch_loss, valid_batch_accuracy = test_func(validset[0], validset[1], batch_cell_init, batch_hidden_init, validset[2])
+        valid_batch_loss, valid_batch_accuracy, valid_batch_perplexity = test_func(validset[0], validset[1], batch_cell_init, batch_hidden_init, validset[2])
         valid_loss.append(valid_batch_loss)
         valid_accuracy.append(valid_batch_accuracy)
+        valid_perplexity.append(valid_batch_perplexity)
         if index % 100 == 0 and index != 0:
             current_time = time.clock()
             print('......... minibatch index', index, 'of total index', valid_gen.max_index)
@@ -187,19 +195,22 @@ def test_validset():
 
     hist.history['valid_loss'].append(np.mean(np.asarray(valid_loss)))
     hist.history['valid_accuracy'].append(np.mean(np.asarray(valid_accuracy)))
+    hist.history['valid_perplexity'].append(np.mean(np.asarray(valid_perplexity)))
 
 def test_testset():
     test_loss = []
     test_accuracy = []
+    test_perplexity = []
     start_time = time.clock()
     batch_cell_init = cell_init
     batch_hidden_init = hidden_init
     for index in range(test_gen.max_index):
         # run minibatch
         testset = test_gen.get_minibatch(index)  # data, mask, label, reset
-        test_batch_loss, test_batch_accuracy = test_func(testset[0], testset[1], batch_cell_init, batch_hidden_init, testset[2])
+        test_batch_loss, test_batch_accuracy, test_batch_perplexity = test_func(testset[0], testset[1], batch_cell_init, batch_hidden_init, testset[2])
         test_loss.append(test_batch_loss)
         test_accuracy.append(test_batch_accuracy)
+        test_perplexity.append(test_batch_perplexity)
         if index % 100 == 0 and index != 0:
             current_time = time.clock()
             print('......... minibatch index', index, 'of total index', valid_gen.max_index)
@@ -213,6 +224,7 @@ def test_testset():
 
     hist.history['test_loss'].append(np.mean(np.asarray(test_loss)))
     hist.history['test_accuracy'].append(np.mean(np.asarray(test_accuracy)))
+    hist.history['test_perplexity'].append(np.mean(np.asarray(test_perplexity)))
 
 #================Train================#
 
@@ -259,7 +271,7 @@ for epoch in range(1000):
 
 test_testset()
 best_loss, best_epoch = hist.best_loss_and_epoch_of_key('valid_loss')
-hist.print_history_of_epoch(best_epoch, ['train_loss', 'train_accuracy', 'valid_loss', 'valid_accuracy'])
+hist.print_history_of_epoch(best_epoch, ['train_loss', 'train_accuracy', 'train_perplexity', 'valid_loss', 'valid_accuracy', 'valid_perplexity'])
 best_loss, best_epoch = hist.best_loss_and_epoch_of_key('test_loss')
-hist.print_history_of_epoch(best_epoch, ['test_loss', 'test_accuracy'])
+hist.print_history_of_epoch(best_epoch, ['test_loss', 'test_accuracy', 'test_perplexity'])
 hist.save_history_to_csv()
