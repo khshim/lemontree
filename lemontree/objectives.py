@@ -63,7 +63,7 @@ class CategoricalCrossentropy(BaseObjective):
         self.stabilize = stabilize
         self.mode = mode
 
-    def get_loss(self, predict, label):
+    def get_loss(self, predict, label, mask=None):
         """
         This function overrides the parents' one.
         Computes the loss by model prediction and real label.
@@ -77,6 +77,9 @@ class CategoricalCrossentropy(BaseObjective):
         label: ndarray
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
+        mask: ndarray
+            an array of (batchsize,) only contains 0 and 1.
+            loss are summed or averaged only through 1.
 
         Returns
         -------
@@ -84,18 +87,32 @@ class CategoricalCrossentropy(BaseObjective):
             a symbolic tensor variable which is scalar.
         """
         # do
-        if self.mode == 'mean':
-            if self.stabilize:
-                return T.mean(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+        if mask is None:
+            if self.mode == 'mean':
+                if self.stabilize:
+                    return T.mean(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                else:
+                    return T.mean(T.nnet.categorical_crossentropy(predict, label))
+            elif self.mode == 'sum':
+                if self.stabilize:
+                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                else:
+                    return T.sum(T.nnet.categorical_crossentropy(predict, label))
             else:
-                return T.mean(T.nnet.categorical_crossentropy(predict, label))
-        elif self.mode == 'sum':
-            if self.stabilize:
-                return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
-            else:
-                return T.sum(T.nnet.categorical_crossentropy(predict, label))
+                raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
         else:
-            raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
+            if self.mode == 'mean':
+                if self.stabilize:
+                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
+                else:
+                    return T.sum(T.nnet.categorical_crossentropy(predict, label) * mask) / T.sum(mask)
+            elif self.mode == 'sum':
+                if self.stabilize:
+                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
+                else:
+                    return T.sum(T.nnet.categorical_crossentropy(predict, label) * mask)
+            else:
+                raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
 
 class CategoricalAccuracy(BaseObjective):
@@ -121,7 +138,7 @@ class CategoricalAccuracy(BaseObjective):
         self.tags = ['accuracy', 'categorical_accuracy']
         self.top_k = top_k
 
-    def get_loss(self, predict, label):
+    def get_loss(self, predict, label, mask=None):
         """
         This function overrides the parents' one.
         Computes the loss by model prediction and real label.
@@ -135,6 +152,9 @@ class CategoricalAccuracy(BaseObjective):
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
             should make label as integer.
+        mask: ndarray
+            an array of (batchsize,) only contains 0 and 1.
+            loss are summed or averaged only through 1.
 
         Returns
         -------
@@ -142,21 +162,38 @@ class CategoricalAccuracy(BaseObjective):
             a symbolic tensor variable which is scalar.
         """
         # do
-        if self.top_k == 1:
-            if label.ndim == 1:
-                return T.mean(T.eq(T.argmax(predict, axis=-1), label))
-            elif label.ndim == 2:
-                return T.mean(T.eq(T.argmax(predict, axis=-1), T.argmax(label, axis=-1)))
+        if mask is None:
+            if self.top_k == 1:
+                if label.ndim == 1:
+                    return T.mean(T.eq(T.argmax(predict, axis=-1), label))
+                elif label.ndim == 2:
+                    return T.mean(T.eq(T.argmax(predict, axis=-1), T.argmax(label, axis=-1)))
+                else:
+                    raise ValueError()
             else:
+                # TODO: not yet tested
+                top_k_predict = T.argsort(predict)[:, -self.top_k:]  # sort by values and keep top k indices
+                if label.ndim == 1:
+                    return T.mean(T.any(T.eq(top_k_predict, label), axis=-1))
+                elif label.ndim == 2:
+                    return T.mean(T.any(T.eq(top_k_predict, T.argmax(label,axis=-1)), axis=-1))
                 raise ValueError()
         else:
-            # TODO: not yet tested
-            top_k_predict = T.argsort(predict)[:, -self.top_k:]  # sort by values and keep top k indices
-            if label.ndim == 1:
-                return T.mean(T.any(T.eq(top_k_predict, label), axis=-1))
-            elif label.ndim == 2:
-                return T.mean(T.any(T.eq(top_k_predict, T.argmax(label,axis=-1)), axis=-1))
-            raise ValueError()
+            if self.top_k == 1:
+                if label.ndim == 1:
+                    return T.sum(T.eq(T.argmax(predict, axis=-1), label) * mask) / T.sum(mask)
+                elif label.ndim == 2:
+                    return T.sum(T.eq(T.argmax(predict, axis=-1), T.argmax(label, axis=-1)) * mask) / T.sum(mask)
+                else:
+                    raise ValueError()
+            else:
+                # TODO: not yet tested
+                top_k_predict = T.argsort(predict)[:, -self.top_k:]  # sort by values and keep top k indices
+                if label.ndim == 1:
+                    return T.sum(T.any(T.eq(top_k_predict, label), axis=-1) * mask) / T.sum(mask)
+                elif label.ndim == 2:
+                    return T.sum(T.any(T.eq(top_k_predict, T.argmax(label,axis=-1)), axis=-1) * mask) / T.sum(mask)
+                raise ValueError()
 
 
 class BinaryCrossentropy(BaseObjective):

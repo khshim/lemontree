@@ -28,6 +28,7 @@ from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params
 from lemontree.utils.type_utils import merge_dicts
 from lemontree.utils.graph_utils import get_inputs_of_variables
+from lemontree.utils.data_utils import int_to_onehot
 
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
@@ -191,7 +192,7 @@ test_func = theano.function(inputs=graph_inputs,
                             allow_input_downcast=True)
 
 test_func_output = theano.function(inputs=[x],
-                                   outputs=graph.get_output(),
+                                   outputs=T.argmax(graph.get_output(), axis=-1),
                                    allow_input_downcast=True)
 
 
@@ -223,14 +224,18 @@ def test_validset():
 
 def test_testset():
     graph.change_flag(-1)
-    test_loss = []
     test_accuracy = []
-    for index in range(test_gen.max_index):
+    for index in range(test_gen.max_index):        
+        confusion_matrix = np.zeros((testset.shape[0], 10)).astype('int32')
+        for times in range(10):
+            testset = test_gen.get_minibatch(index)  # re-sample again, same data, different preprocessing
+            test_output = test_func_output(testset[0])
+            test_output = int_to_onehot(test_output)
+            confusion_matrix += test_output
         testset = test_gen.get_minibatch(index)
-        test_batch_loss, test_batch_accuracy = test_func(*testset)
-        test_loss.append(test_batch_loss)
+        test_batch_answer = np.argmax(confusion_matrix, axis=-1)
+        test_batch_accuracy = np.mean(np.equal(test_batch_answer, testset[1]))
         test_accuracy.append(test_batch_accuracy)
-    hist.history['test_loss'].append(np.mean(np.asarray(test_loss)))
     hist.history['test_accuracy'].append(np.mean(np.asarray(test_accuracy)))
 
 #================Train================#
@@ -276,7 +281,8 @@ for epoch in range(1000):
 
 #================Test================#
 
+test_testset()
 best_loss, best_epoch = hist.best_loss_and_epoch_of_key('valid_loss')
 hist.print_history_of_epoch(best_epoch, ['train_loss', 'train_accuracy', 'valid_loss', 'valid_accuracy'])
-hist.print_history_of_epoch(-1, ['test_loss', 'test_accuracy'])
+hist.print_history_of_epoch(-1, ['test_accuracy'])
 hist.save_history_to_csv()
