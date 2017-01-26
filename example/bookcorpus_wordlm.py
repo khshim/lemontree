@@ -74,10 +74,8 @@ lstm = LSTMRecurrentLayer(input_shape=(300,),
 
 feature_cell, feature_hidden = lstm.get_output(x,m,ci,hi)  # (batch_size, sequence_length, 500)
 
-cell_output = feature_cell[:, overlap_length-1,:]  # (batch_size, 1, 500)
-cell_output = T.reshape(cell_output, (cell_output.shape[0], cell_output.shape[2]))  # (batch_size, 500)
-hidden_output = feature_hidden[:, overlap_length-1,:]  # (batch_size, 1, 500)
-hidden_output = T.reshape(hidden_output, (hidden_output.shape[0], hidden_output.shape[2]))  # (batch_size, 500)
+cell_output = feature_cell[:, overlap_length-1,:]  # (batch_size, 500)
+hidden_output = feature_hidden[:, overlap_length-1,:]  # (batch_size, 500)
 
 # dense
 dense = DenseLayer((500,), (glove.vocabulary,), target_cpu=False, name='dense1')
