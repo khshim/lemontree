@@ -357,6 +357,52 @@ class SquareLoss(BaseObjective):
             raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
 
+class WordPerplexity(BaseObjective):
+
+    def __init__(self):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        None.
+        """
+        self.tags = ['loss', 'word_perplexity']
+
+    def get_loss(self, predict, label, mask):
+        """
+        This function overrides the parents' one.
+        Computes the loss by mode prediction and real label.
+        
+        Parameters
+        ----------
+        predict: ndarray
+            an array of (batch size, prediction).
+            for accuracy task, "predict" is 2D matrix.
+        label: ndarray
+            an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
+            for word perplexity case, currently only second one is supported.
+            should make label as integer.
+        mask: ndarray
+            an array of (batchsize,) only contains 0 and 1.
+            loss are summed or averaged only through 1.
+
+        Returns
+        -------
+        TensorVariable
+            a symbolic tensor variable which is scalar.
+        """
+        # do
+        if mask is None:
+            T.pow(2, -T.mean(T.log2(predict[T.arange(label.shape[0]), label])))
+        else:
+            T.pow(2, -T.sum(T.log2(predict[T.arange(label.shape[0]), label]) * mask) / T.sum(mask))
+
+
 class L1norm(BaseObjective):
 
     def __init__(self):

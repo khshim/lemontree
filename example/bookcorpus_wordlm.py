@@ -181,7 +181,7 @@ def test_validset():
             start_time = current_time
 
         # prepare next initial cell and hidden
-        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(valiset[0], validset[1], batch_cell_init, batch_hidden_init)
+        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(validset[0], validset[1], batch_cell_init, batch_hidden_init)
         batch_cell_init = batch_cell_lstm1 * validset[3][:, np.newaxis]
         batch_hidden_init = batch_hidden_lstm1 * validset[3][:, np.newaxis]
 
