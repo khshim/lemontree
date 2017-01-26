@@ -50,7 +50,7 @@ overlap_length = 10
 cell_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
 hidden_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
 
-glove = GloveData(base_datapath, load_pickle=True)
+glove = GloveData(base_datapath, load_pickle=True)  # pickle dict and embeddings
 train_gen = GloVeWordLMGenerator([train_data], glove, sequence_length, overlap_length, batch_size, 'train', 337)
 test_gen = GloVeWordLMGenerator([test_data], glove, sequence_length, overlap_length, batch_size, 'test', 338)
 valid_gen = GloVeWordLMGenerator([valid_data], glove, sequence_length, overlap_length, batch_size, 'valid', 339)
@@ -130,15 +130,19 @@ test_func = theano.function(inputs=graph_inputs,
 def train_trainset():
     train_loss = []
     train_accuracy = []
-    for index in range(train_gen.max_index):        
+    for index in range(train_gen.max_index):
+        start_time = time.clock()
         trainset = train_gen.get_minibatch(index)
         train_batch_loss, train_batch_accuracy = train_func(trainset[0], trainset[1], cell_init, hidden_init, trainset[2])
         train_loss.append(train_batch_loss)
         train_accuracy.append(train_batch_accuracy)
-        if index % 1000 == 0:
+        if index % 100 == 0:
+            current_time = time.clock()
             print('......... minibatch index', index, 'of total index', train_gen.max_index)
             print('......... minibatch loss',  train_batch_loss)
             print('......... minibatch accuracy', train_batch_accuracy)
+            print('......... minibatch time', current_time - start_time)
+            start_time = current_time
     hist.history['train_loss'].append(np.mean(np.asarray(train_loss)))
     hist.history['train_accuracy'].append(np.mean(np.asarray(train_accuracy)))
 
@@ -146,10 +150,16 @@ def test_validset():
     valid_loss = []
     valid_accuracy = []
     for index in range(valid_gen.max_index):
+        start_time = time.clock()
         validset = valid_gen.get_minibatch(index)
         valid_batch_loss, valid_batch_accuracy = test_func(validset[0], validset[1], cell_init, hidden_init, validset[2])
         valid_loss.append(valid_batch_loss)
         valid_accuracy.append(valid_batch_accuracy)
+        if index % 100 == 0:
+            current_time = time.clock()
+            print('......... minibatch index', index, 'of total index', valid_gen.max_index)
+            print('......... minibatch time', current_time - start_time)
+            start_time = current_time
     hist.history['valid_loss'].append(np.mean(np.asarray(valid_loss)))
     hist.history['valid_accuracy'].append(np.mean(np.asarray(valid_accuracy)))
 
@@ -157,10 +167,16 @@ def test_testset():
     test_loss = []
     test_accuracy = []
     for index in range(test_gen.max_index):
+        start_time = time.clock()
         testset = test_gen.get_minibatch(index)
         test_batch_loss, test_batch_accuracy = test_func(testset[0], testset[1], cell_init, hidden_init, testset[2])
         test_loss.append(test_batch_loss)
         test_accuracy.append(test_batch_accuracy)
+        if index % 100 == 0:
+            current_time = time.clock()
+            print('......... minibatch index', index, 'of total index', valid_gen.max_index)
+            print('......... minibatch time', current_time - start_time)
+            start_time = current_time
     hist.history['test_loss'].append(np.mean(np.asarray(test_loss)))
     hist.history['test_accuracy'].append(np.mean(np.asarray(test_accuracy)))
 
