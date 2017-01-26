@@ -47,9 +47,6 @@ batch_size = 50
 sequence_length = 20
 overlap_length = 10
 
-cell_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
-hidden_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
-
 glove = GloveData(base_datapath, load_pickle=True)  # pickle dict and embeddings
 train_gen = GloVeWordLMGenerator([train_data], glove, sequence_length, overlap_length, batch_size, 'train', 337)
 test_gen = GloVeWordLMGenerator([test_data], glove, sequence_length, overlap_length, batch_size, 'test', 338)
@@ -76,6 +73,11 @@ lstm = LSTMRecurrentLayer(input_shape=(300,),
                           name='lstm1')
 
 feature_cell, feature_hidden = lstm.get_output(x,m,ci,hi)  # (batch_size, sequence_length, 500)
+
+cell_output = feature_cell[:, overlap_length-1,:]  # (batch_size, 1, 500)
+cell_output = T.reshape(cell_output, (cell_output.shape[0], cell_output.shape[2]))  # (batch_size, 500)
+hidden_output = feature_hidden[:, overlap_length-1,:]  # (batch_size, 1, 500)
+hidden_output = T.reshape(hidden_output, (hidden_output.shape[0], hidden_output.shape[2]))  # (batch_size, 500)
 
 # dense
 dense = DenseLayer((500,), (glove.vocabulary,), target_cpu=False, name='dense1')
@@ -121,19 +123,29 @@ train_func = theano.function(inputs=graph_inputs,
                              updates=total_updates,
                              allow_input_downcast=True)
 
+lstm1_result_func = theano.function(inputs=[x,m,ci,hi],
+                                    outputs=[cell_output, hidden_output],
+                                    allow_input_downcast=True)
+
 test_func = theano.function(inputs=graph_inputs,
                             outputs=outputs,
                             allow_input_downcast=True)
 
 #================Convenient functions================#
 
+cell_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
+hidden_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
+
 def train_trainset():
     train_loss = []
     train_accuracy = []
     start_time = time.clock()
-    for index in range(train_gen.max_index):        
-        trainset = train_gen.get_minibatch(index)
-        train_batch_loss, train_batch_accuracy = train_func(trainset[0], trainset[1], cell_init, hidden_init, trainset[2])
+    batch_cell_init = cell_init
+    batch_hidden_init = hidden_init
+    for index in range(train_gen.max_index):
+        # run minibatch
+        trainset = train_gen.get_minibatch(index)  # data, mask, label, reset
+        train_batch_loss, train_batch_accuracy = train_func(trainset[0], trainset[1], batch_cell_init, batch_hidden_init, trainset[2])
         train_loss.append(train_batch_loss)
         train_accuracy.append(train_batch_accuracy)
         if index % 100 == 0 and index != 0:
@@ -143,6 +155,12 @@ def train_trainset():
             print('............ minibatch x 100 accuracy', np.mean(np.asarray(train_accuracy[-100:])))  # only 100, 200... th loss
             print('......... minibatch x 100 time', current_time - start_time)
             start_time = current_time
+        
+        # prepare next initial cell and hidden
+        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(trainset[0], trainset[1], batch_cell_init, batch_hidden_init)
+        batch_cell_init = batch_cell_lstm1 * trainset[3][:, np.newaxis]
+        batch_hidden_init = batch_hidden_lstm1 * trainset[3][:, np.newaxis]
+
     hist.history['train_loss'].append(np.mean(np.asarray(train_loss)))
     hist.history['train_accuracy'].append(np.mean(np.asarray(train_accuracy)))
 
@@ -150,16 +168,25 @@ def test_validset():
     valid_loss = []
     valid_accuracy = []
     start_time = time.clock()
-    for index in range(valid_gen.max_index):        
-        validset = valid_gen.get_minibatch(index)
-        valid_batch_loss, valid_batch_accuracy = test_func(validset[0], validset[1], cell_init, hidden_init, validset[2])
+    batch_cell_init = cell_init
+    batch_hidden_init = hidden_init
+    for index in range(valid_gen.max_index):
+        # run minibatch
+        validset = valid_gen.get_minibatch(index)  # data, mask, label, reset
+        valid_batch_loss, valid_batch_accuracy = test_func(validset[0], validset[1], batch_cell_init, batch_hidden_init, validset[2])
         valid_loss.append(valid_batch_loss)
         valid_accuracy.append(valid_batch_accuracy)
-        if index % 100 == 0:
+        if index % 100 == 0 and index != 0:
             current_time = time.clock()
             print('......... minibatch index', index, 'of total index', valid_gen.max_index)
             print('......... minibatch x 100 time', current_time - start_time)
             start_time = current_time
+
+        # prepare next initial cell and hidden
+        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(valiset[0], validset[1], batch_cell_init, batch_hidden_init)
+        batch_cell_init = batch_cell_lstm1 * validset[3][:, np.newaxis]
+        batch_hidden_init = batch_hidden_lstm1 * validset[3][:, np.newaxis]
+
     hist.history['valid_loss'].append(np.mean(np.asarray(valid_loss)))
     hist.history['valid_accuracy'].append(np.mean(np.asarray(valid_accuracy)))
 
@@ -167,16 +194,25 @@ def test_testset():
     test_loss = []
     test_accuracy = []
     start_time = time.clock()
-    for index in range(test_gen.max_index):        
-        testset = test_gen.get_minibatch(index)
-        test_batch_loss, test_batch_accuracy = test_func(testset[0], testset[1], cell_init, hidden_init, testset[2])
+    batch_cell_init = cell_init
+    batch_hidden_init = hidden_init
+    for index in range(test_gen.max_index):
+        # run minibatch
+        testset = test_gen.get_minibatch(index)  # data, mask, label, reset
+        test_batch_loss, test_batch_accuracy = test_func(testset[0], testset[1], batch_cell_init, batch_hidden_init, testset[2])
         test_loss.append(test_batch_loss)
         test_accuracy.append(test_batch_accuracy)
-        if index % 100 == 0:
+        if index % 100 == 0 and index != 0:
             current_time = time.clock()
             print('......... minibatch index', index, 'of total index', valid_gen.max_index)
             print('......... minibatch x 100 time', current_time - start_time)
             start_time = current_time
+
+        # prepare next initial cell and hidden
+        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(testset[0], testset[1], batch_cell_init, batch_hidden_init)
+        batch_cell_init = batch_cell_lstm1 * testset[3][:, np.newaxis]
+        batch_hidden_init = batch_hidden_lstm1 * testset[3][:, np.newaxis]
+
     hist.history['test_loss'].append(np.mean(np.asarray(test_loss)))
     hist.history['test_accuracy'].append(np.mean(np.asarray(test_accuracy)))
 
