@@ -27,8 +27,8 @@ from lemontree.utils.graph_utils import get_inputs_of_variables
 
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-base_datapath = 'D:/Dropbox/Project/data/'
-# base_datapath = '/home/khshim/data/'
+# base_datapath = 'D:/Dropbox/Project/data/'
+base_datapath = '/home/khshim/data/'
 experiment_name = 'bookcorpus_wordlm'
 
 #================Prepare data================#
@@ -130,11 +130,15 @@ test_func = theano.function(inputs=graph_inputs,
 def train_trainset():
     train_loss = []
     train_accuracy = []
-    for index in range(train_gen.max_index):
+    for index in range(train_gen.max_index):        
         trainset = train_gen.get_minibatch(index)
         train_batch_loss, train_batch_accuracy = train_func(trainset[0], trainset[1], cell_init, hidden_init, trainset[2])
         train_loss.append(train_batch_loss)
         train_accuracy.append(train_batch_accuracy)
+        if index % 1000 == 0:
+            print('......... minibatch index', index, 'of total index', train_gen.max_index)
+            print('......... minibatch loss',  train_batch_loss)
+            print('......... minibatch accuracy', train_batch_accuracy)
     hist.history['train_loss'].append(np.mean(np.asarray(train_loss)))
     hist.history['train_accuracy'].append(np.mean(np.asarray(train_accuracy)))
 
