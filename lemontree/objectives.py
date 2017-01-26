@@ -398,9 +398,9 @@ class WordPerplexity(BaseObjective):
         """
         # do
         if mask is None:
-            T.pow(2, -T.mean(T.log2(predict[T.arange(label.shape[0]), label])))
+            return T.pow(2, -T.mean(T.log2(predict[T.arange(label.shape[0]), label])))
         else:
-            T.pow(2, -T.sum(T.log2(predict[T.arange(label.shape[0]), label]) * mask) / T.sum(mask))
+            return T.pow(2, -T.sum(T.log2(predict[T.arange(label.shape[0]), label]) * mask) / T.sum(mask))
 
 
 class L1norm(BaseObjective):
