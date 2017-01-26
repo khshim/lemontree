@@ -122,7 +122,7 @@ class BatchNormalization1DLayer(BaseLayer):
         Tensorvariable         
         """
         # mean and std for current mini-batch
-        if mean_only:
+        if self.mean_only:
             batch_mean = T.mean(input_, axis=0)
             self.updates[self.bn_mean] = self.bn_mean * self.momentum + batch_mean * (1 - self.momentum)
         else:
@@ -132,7 +132,7 @@ class BatchNormalization1DLayer(BaseLayer):
             self.updates[self.bn_std] = self.bn_std * self.momentum + batch_std * (1 - self.momentum)
 
         # conditional compute
-        if mean_only:
+        if self.mean_only:
             return T.switch(T.gt(self.flag, 0),
                             (input_ - batch_mean) * self.gamma + self.beta,
                             (input_ - self.bn_mean) * self.gamma + self.beta)
@@ -286,7 +286,7 @@ class BatchNormalization3DLayer(BaseLayer):
         Tensorvariable         
         """
         # mean and std for current mini-batch
-        if mean_only:
+        if self.mean_only:
             batch_mean = T.mean(input_, axis=[0, 2, 3])  # mean through batch, width, height
             self.updates[self.bn_mean] = self.bn_mean * self.momentum + batch_mean * (1 - self.momentum)
         else:
@@ -296,7 +296,7 @@ class BatchNormalization3DLayer(BaseLayer):
             self.updates[self.bn_std] = self.bn_std * self.momentum + batch_std * (1 - self.momentum)
 
         # conditional compute
-        if mean_only:
+        if self.mean_only:
             return T.switch(T.gt(self.flag, 0),
                             (input_ - batch_mean.dimshuffle('x',0,'x','x')) * self.gamma.dimshuffle('x',0,'x','x') + self.beta.dimshuffle('x',0,'x','x'),
                             (input_ - self.bn_mean.dimshuffle('x',0,'x','x')) * self.gamma.dimshuffle('x',0,'x','x') + self.beta.dimshuffle('x',0,'x','x'))
