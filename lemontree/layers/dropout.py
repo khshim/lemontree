@@ -90,4 +90,4 @@ class DropoutLayer(BaseLayer):
         else:
             coeff = 1
         mask = self.rng.binomial(input_.shape, p=1 - self.drop_probability, dtype=input_.dtype)
-        return T.switch(T.gt(self.flag, 0), input * mask * coeff, input)
+        return T.switch(T.gt(self.flag, 0), input_ * mask * coeff, input_)
