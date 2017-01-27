@@ -190,8 +190,8 @@ params_saver = SimpleParameter(total_params, experiment_name + '_params/')
 params_saver.save_params()
 # params_saver.load_params()
 
-lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.2)
-hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
+lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.1)
+hist = HistoryWithEarlyStopping(experiment_name + '_history/', 50, 3)
 hist.add_keys(['train_accuracy',  'valid_accuracy', 'test_accuracy'])
 
 #================Compile functions================#
