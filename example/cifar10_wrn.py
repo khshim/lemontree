@@ -56,16 +56,16 @@ train_gen.rgb_to_yuv()
 test_gen.rgb_to_yuv()
 valid_gen.rgb_to_yuv()
 
-train_global_mean = train_gen.global_mean_sub()
+train_global_mean, train_global_std = train_gen.gcn()
 train_pc_matrix = train_gen.zca()
-test_gen.global_mean_sub(train_global_mean)
+test_gen.gcn(train_global_mean, train_global_std)
 test_gen.zca(train_pc_matrix)
-valid_gen.global_mean_sub(train_global_mean)
+valid_gen.gcn(train_global_mean, train_global_std)
 valid_gen.zca(train_pc_matrix)
 
 #================Build graph================#
 
-x = T.ftensor4('x')
+x = T.ftensor4('X')
 y = T.ivector('y')
 
 graph = SimpleGraph(experiment_name)
@@ -108,7 +108,7 @@ res3 = graph.get_output()
 
 graph_res3 = SimpleGraph(experiment_name + '_res3')
 graph_res3.add_input(res3)
-graph_res3.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (2,2), (2,2), name='conv_res3'))
+graph_res3.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (2,2), 'valid', (2,2), name='conv_res3'))
 graph_res3.add_layer(DropoutLayer(0.3, rescale=False, name='drop3'))
 
 # block 2_1
@@ -139,7 +139,7 @@ res5 = graph.get_output()
 
 graph_res5 = SimpleGraph(experiment_name + '_res5')
 graph_res5.add_input(res5)
-graph_res5.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (2,2), (2,2), name='conv_res5'))
+graph_res5.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (2,2), 'valid', (2,2), name='conv_res5'))
 graph_res5.add_layer(DropoutLayer(0.3, rescale=False, name='drop5'))
 
 # block 3_1
