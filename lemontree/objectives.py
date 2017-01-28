@@ -438,7 +438,9 @@ class L1norm(BaseObjective):
         # check asserts
         assert isinstance(params, list), '"params" should be a list type.'
         # do
-        loss_sum = sum([T.sum(T.abs_(pp)) for pp in params])
+        loss_sum = 0
+        for pp in params:
+            loss_sum += T.sum(T.abs_(pp))
         return loss_sum
 
 
@@ -477,5 +479,7 @@ class L2norm(BaseObjective):
         # check asserts
         assert isinstance(params, list), '"params" should be a list type.'
         # do
-        loss_sum = sum([T.sum(T.square(pp)) for pp in params])
+        loss_sum = 0
+        for pp in params:
+            loss_sum += T.sum(T.square(pp))
         return loss_sum

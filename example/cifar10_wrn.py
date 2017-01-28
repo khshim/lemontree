@@ -78,7 +78,7 @@ res1 = graph.get_output()
 graph_res1 = SimpleGraph(experiment_name + '_res1')
 graph_res1.add_input(res1)
 graph_res1.add_layer(Convolution3DLayer((16,32,32), (128,32,32), (1,1), name='conv_res1'))
-graph_res1.add_layer(DropoutLayer(0.3, rescale=True, name='drop1'))
+graph_res1.add_layer(DropoutLayer(0.3, rescale=False, name='drop1'))
 
 # block 1_1
 graph.add_layers([Convolution3DLayer((16,32,32), (128,32,32), (3,3), 'half', use_bias=False, name='conv2'),  # 2
@@ -91,21 +91,25 @@ res2 = graph.get_output()
 
 graph_res2 = SimpleGraph(experiment_name + '_res2')
 graph_res2.add_input(res2)
-graph_res2.add_layer(DropoutLayer(0.3, rescale=True, name='drop2'))
+graph_res2.add_layer(DropoutLayer(0.3, rescale=False, name='drop2'))
 
 # block 1_2
-graph.add_layers([Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', use_bias=False, name='conv4'),  # 4
+graph.add_layers([BatchNormalization3DLayer((128,32,32), 0.9, name='bn3'),
+                  ReLU(name='relu3'),
+                  Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', use_bias=False, name='conv4'),  # 4
                   BatchNormalization3DLayer((128,32,32), 0.9, name='bn4'),
                   ReLU(name='relu4'),
                   Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', name='conv5')])  # 5
 
 graph.merge_graph(graph_res2, 'add')
+graph.add_layers([BatchNormalization3DLayer((128,32,32), 0.9, name='bn5'),
+                  ReLU(name='relu5')])
 res3 = graph.get_output()
 
 graph_res3 = SimpleGraph(experiment_name + '_res3')
 graph_res3.add_input(res3)
-graph_res3.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (1,1), 'half', (2,2), name='conv_res3'))
-graph_res3.add_layer(DropoutLayer(0.3, rescale=True, name='drop3'))
+graph_res3.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (2,2), (2,2), name='conv_res3'))
+graph_res3.add_layer(DropoutLayer(0.3, rescale=False, name='drop3'))
 
 # block 2_1
 graph.add_layers([Convolution3DLayer((128,32,32), (256,16,16), (3,3), 'half', (2,2), use_bias=False, name='conv6'),  # 6
@@ -118,21 +122,25 @@ res4 = graph.get_output()
 
 graph_res4 = SimpleGraph(experiment_name + '_res4')
 graph_res4.add_input(res4)
-graph_res4.add_layer(DropoutLayer(0.3, rescale=True, name='drop4'))
+graph_res4.add_layer(DropoutLayer(0.3, rescale=False, name='drop4'))
 
 # block 2_2
-graph.add_layers([Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', use_bias=False, name='conv8'),  # 8
+graph.add_layers([BatchNormalization3DLayer((256,16,16), 0.9, name='bn7'),
+                  ReLU(name='relu7'),
+                  Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', use_bias=False, name='conv8'),  # 8
                   BatchNormalization3DLayer((256,16,16), 0.9, name='bn8'),
                   ReLU(name='relu8'),
                   Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', name='conv9')])  # 9
 
 graph.merge_graph(graph_res4, 'add')
+graph.add_layers([BatchNormalization3DLayer((256,16,16), 0.9, name='bn9'),
+                  ReLU(name='relu9')])
 res5 = graph.get_output()
 
 graph_res5 = SimpleGraph(experiment_name + '_res5')
 graph_res5.add_input(res5)
-graph_res5.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (1,1), 'half', (2,2), name='conv_res5'))
-graph_res5.add_layer(DropoutLayer(0.3, rescale=True, name='drop5'))
+graph_res5.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (2,2), (2,2), name='conv_res5'))
+graph_res5.add_layer(DropoutLayer(0.3, rescale=False, name='drop5'))
 
 # block 3_1
 graph.add_layers([Convolution3DLayer((256,16,16), (512,8,8), (3,3), 'half', (2,2), use_bias=False, name='conv10'),  # 10
@@ -145,10 +153,12 @@ res6 = graph.get_output()
 
 graph_res6 = SimpleGraph(experiment_name + '_res6')
 graph_res6.add_input(res6)
-graph_res6.add_layer(DropoutLayer(0.3, rescale=True, name='drop6'))
+graph_res6.add_layer(DropoutLayer(0.3, rescale=False, name='drop6'))
 
 # block 3_2
-graph.add_layers([Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', use_bias=False, name='conv12'),  # 12
+graph.add_layers([BatchNormalization3DLayer((512,8,8), 0.9, name='bn11'),
+                  ReLU(name='relu11'),
+                  Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', use_bias=False, name='conv12'),  # 12
                   BatchNormalization3DLayer((512,8,8), 0.9, name='bn12'),
                   ReLU(name='relu12'),
                   Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', name='conv13')])  # 13
@@ -179,7 +189,7 @@ graph_updates = graph.get_updates()
 HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_tags_in_params(graph_params)
 
-optimizer = RMSprop()  # Adam(0.002)
+optimizer = RMSprop(0.01)  # Adam(0.002)
 optimizer_updates = optimizer.get_updates(loss, graph_params)
 optimizer_params = optimizer.get_params()
 
@@ -191,7 +201,7 @@ params_saver.save_params()
 # params_saver.load_params()
 
 lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.1)
-hist = HistoryWithEarlyStopping(experiment_name + '_history/', 50, 3)
+hist = HistoryWithEarlyStopping(experiment_name + '_history/', 50, 5)
 hist.add_keys(['train_accuracy',  'valid_accuracy', 'test_accuracy'])
 
 #================Compile functions================#
@@ -265,7 +275,7 @@ def test_testset():
         for times in range(10):
             testset = test_gen.get_minibatch(index)  # re-sample again, same data, different preprocessing
             test_output = test_func_output(testset[0])
-            test_output = int_to_onehot(test_output)
+            test_output = int_to_onehot(test_output, 10)
             confusion_matrix += test_output
         testset = test_gen.get_minibatch(index)
         test_batch_answer = np.argmax(confusion_matrix, axis=-1)

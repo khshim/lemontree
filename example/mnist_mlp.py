@@ -52,32 +52,33 @@ y = T.ivector('y')
 graph = SimpleGraph(experiment_name)
 graph.add_input(x)
 graph.add_layers([DenseLayer((784,),(1024,), use_bias=False, name='dense1'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn1'),
+                  BatchNormalization1DLayer((1024,), name='bn1'),
                   ReLU(name='relu1'),
                   DenseLayer((1024,),(1024,), use_bias=False, name='dense2'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn2'),
+                  BatchNormalization1DLayer((1024,), name='bn2'),
                   ReLU(name='relu2'),
                   DenseLayer((1024,),(1024,), use_bias=False, name='dense3'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn3'),
+                  BatchNormalization1DLayer((1024,), name='bn3'),
                   ReLU(name='relu3'),
                   DenseLayer((1024,),(1024,), use_bias=False, name='dense4'),
-                  BatchNormalization1DLayer((1024,), 0.9, name='bn4'),
+                  BatchNormalization1DLayer((1024,), name='bn4'),
                   ReLU(name='relu4'),
                   DenseLayer((1024,),(10,), name='dense5'),
                   Softmax(name='softmax1')])
 
+graph_params = graph.get_params()
+graph_updates = graph.get_updates()
+
 loss = CategoricalCrossentropy().get_loss(graph.get_output(), y)
 accuracy = CategoricalAccuracy().get_loss(graph.get_output(), y)
 
-graph_params = graph.get_params()
-graph_updates = graph.get_updates()
 
 #================Prepare arguments================#
 
 HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_tags_in_params(graph_params)
 
-optimizer = Adam(0.002)
+optimizer = Adam(0.01)
 optimizer_updates = optimizer.get_updates(loss, graph_params)
 optimizer_params = optimizer.get_params()
 
