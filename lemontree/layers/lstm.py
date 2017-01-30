@@ -18,7 +18,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
     def __init__(self, input_shape, output_shape,
                  gate_activation = Sigmoid(),
                  cell_activation = Tanh(),
-                 out_activation = Tanh(), 
+                 out_activation = Tanh(),
                  forget_bias_one=False,
                  peephole=False,
                  gradient_steps=-1,
@@ -272,4 +272,3 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
             return [self.W, self.U, self.b, self.V]
         else:
             return [self.W, self.U, self.b]
-

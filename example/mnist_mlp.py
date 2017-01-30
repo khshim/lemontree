@@ -21,7 +21,7 @@ from lemontree.initializers import HeNormal
 from lemontree.objectives import CategoricalAccuracy, CategoricalCrossentropy
 from lemontree.optimizers import Adam
 from lemontree.parameters import SimpleParameter
-from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params
+from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
 from lemontree.utils.type_utils import merge_dicts
 from lemontree.utils.graph_utils import get_inputs_of_variables
 from lemontree.utils.data_utils import int_to_onehot
@@ -72,11 +72,11 @@ graph_updates = graph.get_updates()
 loss = CategoricalCrossentropy().get_loss(graph.get_output(), y)
 accuracy = CategoricalAccuracy().get_loss(graph.get_output(), y)
 
-
 #================Prepare arguments================#
 
 HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_tags_in_params(graph_params)
+print_params_num(graph_params)
 
 optimizer = Adam(0.01)
 optimizer_updates = optimizer.get_updates(loss, graph_params)

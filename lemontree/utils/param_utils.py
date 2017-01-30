@@ -133,3 +133,27 @@ def print_params_statistics(params):
         pvalue = pp.get_value()
         print(pp.name, 'mean:', np.mean(pvalue), 'std:', np.std(pvalue),
               'max:', np.max(pvalue), 'min:', np.min(pvalue), sep='\t')
+
+
+def print_params_num(params):
+    """
+    This function prints how many parameters used.
+
+    Parameters
+    ----------
+    params: list
+        a list of (shared variable) parameters.
+
+    Returns
+    -------
+    None.
+    """
+    # check asserts
+    assert isinstance(params, list), '"params" should be a list type.'
+
+    # do
+    sum = 0
+    for pp in params:
+        pvalue = pp.get_value(borrow=True)
+        sum += np.prod(pvalue.shape)
+    print('Total parameters:', sum)

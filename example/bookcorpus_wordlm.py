@@ -22,7 +22,7 @@ from lemontree.initializers import GlorotNormal
 from lemontree.objectives import CategoricalCrossentropy, CategoricalAccuracy, WordPerplexity
 from lemontree.optimizers import RMSprop
 from lemontree.parameters import SimpleParameter
-from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params
+from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
 from lemontree.utils.graph_utils import get_inputs_of_variables
 
 np.random.seed(9999)
@@ -97,6 +97,7 @@ graph_params = lstm.get_params() + dense.get_params()
 
 GlorotNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_tags_in_params(graph_params)
+print_params_num(graph_params)
 
 optimizer = RMSprop(0.0001, clipnorm=5.0)
 optimizer_updates = optimizer.get_updates(loss, graph_params)
