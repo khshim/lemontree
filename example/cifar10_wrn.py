@@ -191,7 +191,7 @@ params_saver.save_params()
 # params_saver.load_params()
 
 lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.1)
-hist = HistoryWithEarlyStopping(experiment_name + '_history/', 20, 5)
+hist = HistoryWithEarlyStopping(experiment_name + '_history/', 10, 5)
 hist.add_keys(['train_accuracy',  'valid_accuracy', 'test_accuracy'])
 
 #================Compile functions================#

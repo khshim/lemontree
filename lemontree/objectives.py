@@ -108,7 +108,7 @@ class CategoricalCrossentropy(BaseObjective):
                     return T.sum(T.nnet.categorical_crossentropy(predict, label) * mask) / T.sum(mask)
             elif self.mode == 'sum':
                 if self.stabilize:
-                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
+                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask)
                 else:
                     return T.sum(T.nnet.categorical_crossentropy(predict, label) * mask)
             else:
@@ -228,7 +228,7 @@ class BinaryCrossentropy(BaseObjective):
         self.stabilize = stabilize
         self.mode = mode
 
-    def get_loss(self, predict, label):
+    def get_loss(self, predict, label, mask=None):
         """
         This function overrides the parents' one.
         Computes the loss by model prediction and real label.
@@ -241,6 +241,9 @@ class BinaryCrossentropy(BaseObjective):
             for cross entropy task, "predict" is 2D matrix.
         label: ndarray
             an array of or (batchsize,) whose value is 0 or 1.
+        mask: ndarray
+            an array of (batchsize,) only contains 0 and 1.
+            loss are summed or averaged only through 1.
 
         Returns
         -------
@@ -248,18 +251,32 @@ class BinaryCrossentropy(BaseObjective):
             a symbolic tensor variable which is scalar.
         """
         # do
-        if self.mode == 'mean':
-            if self.stabilize:
-                return T.mean(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+        if mask is None:
+            if self.mode == 'mean':
+                if self.stabilize:
+                    return T.mean(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                else:
+                    return T.mean(T.nnet.binary_crossentropy(predict, label))
+            elif self.mode == 'sum':
+                if self.stabilize:
+                    return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                else:
+                    return T.sum(T.nnet.binary_crossentropy(predict, label))
             else:
-                return T.mean(T.nnet.binary_crossentropy(predict, label))
-        elif self.mode == 'sum':
-            if self.stabilize:
-                return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
-            else:
-                return T.sum(T.nnet.binary_crossentropy(predict, label))
+                raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
         else:
-            raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
+            if self.mode == 'mean':
+                if self.stabilize:
+                    return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
+                else:
+                    return T.sum(T.nnet.binary_crossentropy(predict, label) * mask) / T.sum(mask)
+            elif self.mode == 'sum':
+                if self.stabilize:
+                    return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask)
+                else:
+                    return T.sum(T.nnet.binary_crossentropy(predict, label) * mask)
+            else:
+                raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
 
 class BinaryAccuracy(BaseObjective):
