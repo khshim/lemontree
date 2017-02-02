@@ -52,7 +52,6 @@ def read_bookcorpus(base_datapath, glove, mode='books_large_p1',
     """
     # check asserts
     assert isinstance(base_datapath, str), '"base_datapath" should be a string path.'
-    assert isinstance(glove, GloveData), '"glove" should be GloveData instance.'
     assert mode in ['books_large_p1', 'books_large_p2'], '"mode" should be one name of the two files.'
     assert isinstance(num_sentence, int), '"num_sentence" should be a positive integer.'
     assert isinstance(min_length, int), '"min_length" should be a positive integer.'
