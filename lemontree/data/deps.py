@@ -175,6 +175,33 @@ class DepsData(object):
         assert index == len(indices)  # all words are included
         return words_embedding
 
+    def indices_to_words(self, indices):
+        """
+        This function returns words of given word index.
+
+        Parameters
+        ----------
+        indices: list
+            a list of integers under vocabulary size.
+            order is preserved.
+
+        Return
+        ------
+        ndarray
+            a matrix of shape (words, vector dimension)
+        """
+        # check asserts
+        assert isinstance(indices, list), '"indices" should be a list of integers.'
+
+        # get keys and make matrix
+        words = []
+        index = 0
+        for ii in indices:
+            words.append(self.dict_reverse[ii])
+            index += 1
+        assert index == len(indices)  # all words are included
+        return words
+
     def words_to_vec(self, words):
         """
         This function converts words into deps word vectors.
