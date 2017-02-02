@@ -18,9 +18,9 @@ class BaseObjective(object):
 
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
-        label: ndarray
+        label: TensorVariable
             an array of (batch size, answer).
 
         Returns
@@ -71,13 +71,13 @@ class CategoricalCrossentropy(BaseObjective):
 
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
             for cross entropy task, "predict" is 2D matrix.
-        label: ndarray
+        label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
-        mask: ndarray
+        mask: TensorVariable
             an array of (batchsize,) only contains 0 and 1.
             loss are summed or averaged only through 1.
 
@@ -145,14 +145,14 @@ class CategoricalAccuracy(BaseObjective):
 
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
             for accuracy task, "predict" is 2D matrix.
-        label: ndarray
+        label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
             should make label as integer.
-        mask: ndarray
+        mask: TensorVariable
             an array of (batchsize,) only contains 0 and 1.
             loss are summed or averaged only through 1.
 
@@ -236,12 +236,12 @@ class BinaryCrossentropy(BaseObjective):
 
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
             for cross entropy task, "predict" is 2D matrix.
-        label: ndarray
+        label: TensorVariable
             an array of or (batchsize,) whose value is 0 or 1.
-        mask: ndarray
+        mask: TensorVariable
             an array of (batchsize,) only contains 0 and 1.
             loss are summed or averaged only through 1.
 
@@ -303,10 +303,10 @@ class BinaryAccuracy(BaseObjective):
 
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
             for accuracy task, "predict" is 2D matrix.
-        label: ndarray
+        label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
             should make label as integer.
@@ -345,20 +345,23 @@ class SquareLoss(BaseObjective):
         self.tags = ['loss', 'square_loss']
         self.mode = mode
 
-    def get_loss(self, predict, label):
+    def get_loss(self, predict, label, mask=None):
         """
         This function overrides the parents' one.
         Computes the loss by model prediction and real label.
 
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
             for accuracy task, "predict" is 2D matrix.
-        label: ndarray
+        label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend first one.
             should make label as one-hot encoding.
+        mask: TensorVariable
+            an array of (batchsize,) only contains 0 and 1.
+            loss are summed or averaged only through 1.
 
         Returns
         -------
@@ -366,12 +369,20 @@ class SquareLoss(BaseObjective):
             a symbolic tensor variable which is scalar.
         """
         # do
-        if self.mode == 'mean':
-            return T.mean(T.square(predict - label))
-        elif self.mode == 'sum':
-            return T.sum(T.square(predict - label))
+        if mask is None:
+            if self.mode == 'mean':
+                return T.mean(T.square(predict - label))
+            elif self.mode == 'sum':
+                return T.sum(T.square(predict - label))
+            else:
+                raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
         else:
-            raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
+            if self.mode == 'mean':
+                return T.sum(T.sum(T.square(predict - label), axis=-1) * mask) / T.sum(mask)
+            elif self.mode == 'sum':
+                return T.sum(T.sum(T.square(predict - label), axis=-1) * mask)
+            else:
+                raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
 
 class WordPerplexity(BaseObjective):
@@ -397,14 +408,14 @@ class WordPerplexity(BaseObjective):
         
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
             for accuracy task, "predict" is 2D matrix.
-        label: ndarray
+        label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for word perplexity case, currently only second one is supported.
             should make label as integer.
-        mask: ndarray
+        mask: TensorVariable
             an array of (batchsize,) only contains 0 and 1.
             loss are summed or averaged only through 1.
 
