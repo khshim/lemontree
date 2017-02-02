@@ -381,12 +381,15 @@ class GumbelSoftmax(BaseLayer):
     See "Categorical Reparameterization with Gumbel-softmax".
     (Eric Jang, Shixiang Gu, Ben Poole, 2016.)
     """
-    def __init__(self, temperature_init=0.1, seed=9683, name=None):
+    def __init__(self, shape, temperature_init=0.1, seed=9683, name=None):
         """
         This function initializes the class.
 
         Parameters
         ----------
+        shape: tuple
+            a tuple of shape of gumbel random distribution.
+            this is required for scan to not affected.
         temperature_init: float, default: 1
             a positive float value.
             if T > 1, become more soften, and T < 1, become more sharpen.
@@ -400,9 +403,11 @@ class GumbelSoftmax(BaseLayer):
         """
         super(GumbelSoftmax, self).__init__(name)
         # check asserts
+        assert isinstance(shape, tuple), '"shape" should be a tuple of shape.'
         assert temperature_init > 0, '"temperature_init" should be a positive float.'
         
         # set members
+        self.shape = shape
         temperature = np.array(temperature_init).astype('float32')
         self.temperature = theano.shared(temperature, 'temperature')
         self.temperature.tags = ['temperature']
@@ -445,6 +450,6 @@ class GumbelSoftmax(BaseLayer):
         TensorVariable
         """
         # generate random gumbel distribution
-        uniform_random = self.rng.uniform(input_.shape, 0, 1)
+        uniform_random = self.rng.uniform(self.shape, 0, 1)
         gumbel_random = -T.log(-T.log(uniform_random + 1e-7) + 1e-7)
         return T.nnet.softmax((input_ + gumbel_random) / self.temperature)  # divide by temperature
