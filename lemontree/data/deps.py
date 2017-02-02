@@ -1,15 +1,15 @@
 """
-This code includes functions for reading Glove word embeddings and search.
+This code includes functions for reading deps word embeddings and search.
 
 Download
 --------
-Glove: Global vectors for word representation
-http://nlp.stanford.edu/projects/glove/
-Download 'Wikipedia 2014 + Gigaword 5 (6B tokens, 400K vocab, uncased, 50d, 100d, 200d, & 300d vectors)'.
-Unzip the file and let them as txt file.
+Dependency-Based Word Embeddings
+https://levyomer.wordpress.com/2014/04/25/dependency-based-word-embeddings/
+Download 'Dependency-Based[words]'.
+Unzip the file.
 
 Base datapath: '~~~/data/'
-Additional folder structure: '~~~/data/glove/glove.6B.300d.txt'
+Additional folder structure: '~~~/data/deps/deps.words'
 """
 
 import time
@@ -17,26 +17,23 @@ import pickle
 import numpy as np
 
 
-class GloveData(object):
+class DepsData(object):
     """
-    This class use glove word vector set to make word embeddings.
+    This class use deps word vector set to make word embeddings.
     """
-    def __init__(self, base_datapath, mode='6B.300d', seed=33, load_pickle=True):
+    def __init__(self, base_datapath, seed=33, load_pickle=True):
         """
         This function initializes the class.
-        Initialization contains loading and parsing of glove data.
+        Initialization contains loading and parsing of deps data.
         Either two way is possible.
-        One is to save glove as dictonary type in memory.
-        The other is to save glove separately, label and index to dictionary an data in ndarray.
+        One is to save deps as dictonary type in memory.
+        The other is to save deps separately, label and index to dictionary an data in ndarray.
         We choose second option to get (maybe slightly) better cache and memory usage.
         
         Parameters
         ----------
         base_datapath: string
-            a string path where glove vector text is saved.
-        mode: string, default: '6B.300d'
-            a string which will be target glove vector.
-            i.e., 'glove.6B.300d.txt'.
+            a string path where deps vector text is saved.
         seed: int
             an integer to randomly generate eos, sos, unk tokens.
         load_pickle: bool, default: False
@@ -48,30 +45,29 @@ class GloveData(object):
         """
         # check asserts
         assert isinstance(base_datapath, str), '"base_datapath" should be a string path.'
-        assert isinstance(mode, str), '"mode" should be a string name for glove word vector.'
         assert isinstance(load_pickle, bool), '"load_pickle" should be a bool value.'
         
         # load
         start_time = time.clock()
         if load_pickle:
-            dict_file = base_datapath + 'glove/glove.' + mode + '_dict.pickle'
-            print('Glove dict load file:', dict_file)
+            dict_file = base_datapath + 'deps/deps_dict.pickle'
+            print('Deps dict load file:', dict_file)
             with open(dict_file, 'rb') as f:
                 self.dict = pickle.load(f)
 
-            embedding_file = base_datapath + 'glove/glove.' + mode + '_embedding.pickle'
-            print('Glove embedding load file:', embedding_file)
+            embedding_file = base_datapath + 'deps/deps_embedding.pickle'
+            print('Deps embedding load file:', embedding_file)
             with open(embedding_file, 'rb') as f:
                 self.embedding = pickle.load(f)
             self.vocabulary = self.embedding.shape[0]
             self.dimension = self.embedding.shape[1]
         else:
-            glove_file = base_datapath + 'glove/glove.' + mode + '.txt'
-            print('Glove load file:', glove_file)
+            deps_file = base_datapath + 'deps/deps.words'
+            print('Deps load file:', deps_file)
             self.dict = {}
             self.embedding = []
             index = 0            
-            with open(glove_file, 'r', encoding='utf-8') as f:
+            with open(deps_file, 'r', encoding='utf-8') as f:
                 while True:
                     line = f.readline()
                     if not line:
@@ -102,12 +98,12 @@ class GloveData(object):
             self.vocabulary = len(self.embedding)
             
             # save pickle dump
-            dict_file = base_datapath + 'glove/glove.' + mode + '_dict.pickle'
-            print('Glove dict save file:', dict_file)
+            dict_file = base_datapath + 'deps/deps_dict.pickle'
+            print('Deps dict save file:', dict_file)
             with open(dict_file, 'wb') as f:
                 pickle.dump(self.dict, f, protocol=pickle.HIGHEST_PROTOCOL)
-            embedding_file = base_datapath + 'glove/glove.' + mode + '_embedding.pickle'
-            print('Glove embedding save file:', embedding_file)
+            embedding_file = base_datapath + 'deps/deps_embedding.pickle'
+            print('Deps embedding save file:', embedding_file)
             with open(embedding_file, 'wb') as f:
                 pickle.dump(self.embedding, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -115,9 +111,9 @@ class GloveData(object):
         self.dict_reverse = dict(zip(self.dict.values(), self.dict.keys()))
 
         end_time= time.clock()
-        print('Glove load time:', end_time - start_time)
-        print('Glove data shape:', self.embedding.shape)     
-        print('Glove total vocabulary:', self.vocabulary)
+        print('Deps load time:', end_time - start_time)
+        print('Deps data shape:', self.embedding.shape)     
+        print('Deps total vocabulary:', self.vocabulary)
 
     def words_to_indices(self, words):
         """
@@ -181,7 +177,7 @@ class GloveData(object):
 
     def words_to_vec(self, words):
         """
-        This function converts words into glove word vectors.
+        This function converts words into deps word vectors.
         Convenient function, which do only two function merging.
 
         Parameters
@@ -200,31 +196,28 @@ class GloveData(object):
 
 
 if __name__ == '__main__':
-    base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-    glove = GloveData(base_datapath)
-    # for glove.6B.300d.txt'
-    print(' ' in glove.dict.keys())  # False
-    print('\n' in glove.dict.keys())  # False
-    print('.' in glove.dict.keys())  # True
-    print(',' in glove.dict.keys())  # True
-    print('?' in glove.dict.keys())  # True
-    print('!' in glove.dict.keys())  # True
-    print('the' in glove.dict.keys())  # True
-    print('a' in glove.dict.keys())  # True
-    print('<UNK>' in glove.dict.keys())  # False -> True
-    print('<EOS>' in glove.dict.keys())  # False -> True
-    print('<SOS>' in glove.dict.keys())  # False -> True
-    print('"' in glove.dict.keys())  # True
-    print('learn' in glove.dict.keys())  # True
-    print('learning' in glove.dict.keys())  # True
-    print('learned' in glove.dict.keys())  # True
+    base_datapath = 'D:/Dropbox/Project/data/'
+    deps = DepsData(base_datapath, load_pickle=True)
+    # for deps.words'
+    print(' ' in deps.dict.keys())  # False
+    print('\n' in deps.dict.keys())  # False
+    print('.' in deps.dict.keys())  # True
+    print(',' in deps.dict.keys())  # True
+    print('?' in deps.dict.keys())  # True
+    print('!' in deps.dict.keys())  # True
+    print('the' in deps.dict.keys())  # True
+    print('The' in deps.dict.keys())  # False
+    print('a' in deps.dict.keys())  # True
+    print('A' in deps.dict.keys())  # False
+    print('<UNK>' in deps.dict.keys())  # False -> True
+    print('<EOS>' in deps.dict.keys())  # False -> True
+    print('<SOS>' in deps.dict.keys())  # False -> True
+    print('"' in deps.dict.keys())  # True
+    print('learn' in deps.dict.keys())  # True
+    print('learning' in deps.dict.keys())  # True
+    print('learned' in deps.dict.keys())  # True
 
-    embedded = glove.words_to_vec(['i', 'have', 'kyuhong', 'cat'])
+    embedded = deps.words_to_vec(['i', 'have', 'kyuhong', 'cat'])
     print(embedded.shape)
     print(embedded)
-    print(glove.embedding[glove.dict['<UNK>']])
-    
-    print('----------------------------------------')
-    print(glove.embedding[glove.dict['learn']][:20])
-    print(glove.embedding[glove.dict['learning']][:20])
-    print(glove.embedding[glove.dict['learned']][:20])
+    print(deps.embedding[deps.dict['<UNK>']])
