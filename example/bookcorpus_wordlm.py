@@ -12,7 +12,7 @@ import theano.tensor as T
 from lemontree.data.mnist import MNIST
 from lemontree.data.glove import GloveData
 from lemontree.data.bookcorpus import BookCorpusWordCorpus
-from lemontree.generators.sequence import GloVeWordLMGenerator
+from lemontree.generators.sequence import WordLMGenerator
 from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.layers.activation import ReLU, Softmax
@@ -48,9 +48,9 @@ sequence_length = 20
 overlap_length = 10
 
 glove = GloveData(base_datapath, load_pickle=True)  # pickle dict and embeddings
-train_gen = GloVeWordLMGenerator([train_data], glove, sequence_length, overlap_length, batch_size, 'train', 337)
-test_gen = GloVeWordLMGenerator([test_data], glove, sequence_length, overlap_length, batch_size, 'test', 338)
-valid_gen = GloVeWordLMGenerator([valid_data], glove, sequence_length, overlap_length, batch_size, 'valid', 339)
+train_gen = WordLMGenerator([train_data], glove, sequence_length, overlap_length, batch_size, 'train', 337)
+test_gen = WordLMGenerator([test_data], glove, sequence_length, overlap_length, batch_size, 'test', 338)
+valid_gen = WordLMGenerator([valid_data], glove, sequence_length, overlap_length, batch_size, 'valid', 339)
 
 #================Build graph================#
 

@@ -10,7 +10,7 @@ from lemontree.generators.generator import SimpleGenerator
 from lemontree.data.glove import GloveData
 
 
-class GloVeWordLMGenerator(SimpleGenerator):
+class WordLMGenerator(SimpleGenerator):
     """
     This class get sequence data 3D tensor and generate mini-batch of words.
     Using GloVe word vector to make word embedding.
@@ -46,9 +46,8 @@ class GloVeWordLMGenerator(SimpleGenerator):
         -------
         None.
         """
-        super(GloVeWordLMGenerator, self).__init__(data_list, batch_size, name, seed)
+        super(WordLMGenerator, self).__init__(data_list, batch_size, name, seed)
         # check asserts
-        assert isinstance(glove, GloveData), '"glove" should be GloveData instance.'
         assert isinstance(sequence_length, int), '"sequence_length" should be a positive integer.'
         if overlap_length is None:
             overlap_length = sequence_length
