@@ -36,10 +36,10 @@ class ConfusionTrace(BaseObjective):
 
         Parameters
         ----------
-        predict: ndarray
+        predict: TensorVariable
             an array of (batch size, prediction).
             for accuracy task, "predict" is 2D matrix.
-        label: ndarray
+        label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
 

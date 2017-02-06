@@ -104,7 +104,10 @@ class SimpleGenerator(object):
         # make returns
         data = ()
         for dd in self.data_list:
-            data = data + (dd[self.order[self.batch_size * index: self.batch_size * (index+1)]],)
+            if isinstance(dd, list):
+                data = data + ([dd[i] for i in self.order[self.batch_size * index: self.batch_size * (index+1)]],)
+            else:
+                data = data + (dd[self.order[self.batch_size * index: self.batch_size * (index+1)]],)
         return data
 
     def get_fullbatch(self):

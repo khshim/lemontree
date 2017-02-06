@@ -28,7 +28,7 @@ class WordLMGenerator(SimpleGenerator):
             a list of data, each include equal number of data.
         glove: GloveData
             a GloveData which includes the embeddings and dictionary.
-        sequence_length: integer, default: 100
+        sequence_length: integer, default: 20
             an integer which indicates each length of the sentence.
             in otherwords, the number of timestep RNN gets each time.
         overlap_length: integer, default: None

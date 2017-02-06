@@ -70,3 +70,99 @@ def split_data(input, rule=0.9):
     else:
         raise ValueError('Invalid input "rule".')
     return first_input, second_input
+
+
+def sentence_padding(sentences, pad_length):
+    """
+    This function add padding to all sentences.
+    Assert all sentences length is equal or smaller than pad_length.
+    Returns mask, too.
+
+    Parameters
+    ----------
+    sentences: list
+        a list of list of sentence words or word indices.
+        i.e,. [[1,3,4],[0,5,7,9,6]]
+        each sentences should be no longer than pad_length.
+    pad_length: int
+        an integer of max length.
+        sentence of length smaller are padded by zero.
+        sentence of length larger is cut-off.
+    Returns
+    -------
+    tuple
+        a tuple of two equal-shape list. (n_data, pad_length)
+    """
+    # check asserts
+    assert isinstance(sentences, list), '"sentences" should be a list.'
+    assert isinstance(pad_length, int), '"pad_length" should be an integer.'
+
+    # do
+    new = []
+    mask = []
+    for sen in sentences:
+        if len(sen) > pad_length:
+            new.append(sen[:pad_length])
+            mask.append([1] * pad_length)
+        else:
+            new.append(sen + [0] * (pad_length - len(sen)))
+            mask.append([1] * len(sen) + [0] * (pad_length - len(sen)))
+
+    print(len(sentences), 'sentences are padded to length', pad_length)
+
+    return new, mask
+
+
+def sentence_bucketing(sentences, buckets=[20,40,60,80,100]):
+    """
+    This function classifies sentences to buckets.
+    All sentence length is padded to length in buckets.
+
+    Parameters
+    ----------
+    sentences: list
+        a list of list of sentence words or word indices.
+        i.e,. [[1,3,4], [0,5,7,9,6]]
+    buckets: list
+        a list of pad_length for each buckets.
+        sentences are sorted to proper buckets.
+        if sentence is too long than the longest bucket, it is cut-off.
+
+    Returns
+    -------
+    tuple
+        a tuple of two equal-shape list. (n_bucket, n_data, pad_length)
+    """
+    # check asserts
+    assert isinstance(sentences, list), '"sentences" should be a list.'
+    assert isinstance(buckets, list), '"buckets" should be a list of integers.'
+
+    # do
+    buckets = sorted(buckets)
+    largest_bucket = buckets[-1]
+    num_bucket = len(buckets)
+    new = [[] for i in range(num_bucket)]
+    mask = [[] for i in range(num_bucket)]
+    
+    for sen in sentences:
+        for i in range(num_bucket):
+            if len(sen) > largest_bucket:
+                new[-1].append(sen)
+                break
+            elif len(sen) <= buckets[i]:
+                new[i].append(sen)
+                break
+
+    for i in range(num_bucket):
+        bucket_new, bucket_mask = sentence_padding(new[i], buckets[i])
+        new[i] = bucket_new
+        mask[i] = bucket_mask
+
+    return new, mask
+
+if __name__ == '__main__':
+    sentence = [[1,2,3,4], [5,6,7,8,9,0], [3,5,7], [8,9]]
+    #pad_sentence, pad_mask = sentence_padding(sentence, 4)
+    pad_sentence, pad_mask = sentence_bucketing(sentence, [2,4,8])
+    print(pad_sentence)
+    print(pad_mask)

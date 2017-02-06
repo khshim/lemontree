@@ -53,7 +53,7 @@ class CosineDistance(BaseObjective):
         embedding_norm = T.sqrt(T.sum(T.square(self.embedding), axis=-1) + 1e-7)  # (vocabulary,)
 
         vector_dimshuffle = vector.dimshuffle(0, 'x', 1)  # (batch_size, 1, dimension)
-        embedding_dimshuffle = embedding.dimshuffle('x', 0, 1)  # (1, vocabulary, dimension)
+        embedding_dimshuffle = self.embedding.dimshuffle('x', 0, 1)  # (1, vocabulary, dimension)
 
         inner_product = T.sum(vector_dimshuffle * embedding_dimshuffle, axis=-1)  # (batch_size, vocabulary)
         inner_product = inner_product / vector_norm.dimshuffle(0, 'x')   # (batch_size, vocabulary)
