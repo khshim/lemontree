@@ -157,6 +157,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         ----------
         input_: TensorVariable
         mask_: TensorVariable
+        cell_init: TensorVariable
         hidden_init: TensorVariable
 
         Returns
@@ -447,7 +448,8 @@ class DeepLSTMRecurrentLayer(BaseRecurrentLayer):
         ----------
         input_: TensorVariable
         mask_: TensorVariable
-        hidden_init: TensorVariable
+        cells_init: TensorVariable
+        hiddens_init: TensorVariable
 
         Returns
         -------

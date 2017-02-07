@@ -257,6 +257,7 @@ paket-files/
 *.pyproj
 *.sln
 *.csv
+*.txt
 .vs/
 __pycache__/
 lemontree.egg-info
