@@ -275,6 +275,8 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
             return [self.W, self.U, self.b]
 
 
+# TODO: Find better way to use Deep LSTM.
+'''
 class DeepLSTMRecurrentLayer(BaseRecurrentLayer):
     """
     This class implements Deep LSTM recurrent layer.
@@ -567,3 +569,4 @@ class DeepLSTMRecurrentLayer(BaseRecurrentLayer):
             return self.W + self.U + self.b + self.V
         else:
             return self.W + self.U + self.b
+'''
