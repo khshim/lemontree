@@ -21,8 +21,10 @@ from lemontree.layers.pool import Pooling3DLayer, GlobalAveragePooling3DLayer
 from lemontree.layers.dense import DenseLayer
 from lemontree.layers.normalization import BatchNormalization1DLayer, BatchNormalization3DLayer
 from lemontree.layers.shape import Flatten3DLayer
+from lemontree.layers.merge import MergeAddLayer
+from lemontree.layers.dropout import DropoutLayer
 from lemontree.initializers import HeNormal
-from lemontree.objectives import CategoricalAccuracy, CategoricalCrossentropy
+from lemontree.layers.objective import CategoricalAccuracy, CategoricalCrossentropy
 from lemontree.optimizers import Adam, RMSprop
 from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
@@ -32,8 +34,8 @@ from lemontree.utils.data_utils import int_to_onehot
 
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-# base_datapath = 'D:/Dropbox/Project/data/'
-base_datapath = '/home/khshim/data/'
+base_datapath = 'D:/Dropbox/Project/data/'
+# base_datapath = '/home/khshim/data/'
 experiment_name = 'cifar10_wrn'
 
 #================Prepare data================#
@@ -63,120 +65,82 @@ valid_gen.zca(train_pc_matrix)
 x = T.ftensor4('X')
 y = T.ivector('y')
 
-graph = SimpleGraph(experiment_name)
-graph.add_input(x)
-graph.add_layers([Convolution3DLayer((3,32,32), (16,32,32), (3,3), 'half', use_bias=False, name='conv1'),  # 1
-                  BatchNormalization3DLayer((16,32,32), 0.95, name='bn1'),
-                  ReLU(name='relu1')])
-res1 = graph.get_output()
+graph = SimpleGraph(experiment_name, 128)
+graph.add_layer(Convolution3DLayer((3,32,32), (16,32,32), (3,3), 'half', use_bias=False), get_from=[])  # 0
+graph.add_layer(BatchNormalization3DLayer((16,32,32), 0.95))                                    # 1
+graph.add_layer(ReLU())                                                                         # 2
 
-graph_res1 = SimpleGraph(experiment_name + '_res1')
-graph_res1.add_input(res1)
-graph_res1.add_layer(Convolution3DLayer((16,32,32), (128,32,32), (1,1), name='conv_res1'))
+graph.add_layer(Convolution3DLayer((16,32,32), (128,32,32), (3,3), 'half', use_bias=False))     # 3
+graph.add_layer(BatchNormalization3DLayer((128,32,32), 0.95))                                   # 4
+graph.add_layer(ReLU())                                                                         # 5
+graph.add_layer(Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half'))                    # 6
+graph.add_layer(Convolution3DLayer((16,32,32), (128,32,32), (1,1)), get_from=[-5])              # 7
+graph.add_layer(MergeAddLayer((128,32,32)), get_from=[-1,-2])                                   # 8
 
-# block 1_1
-graph.add_layers([Convolution3DLayer((16,32,32), (128,32,32), (3,3), 'half', use_bias=False, name='conv2'),  # 2
-                  BatchNormalization3DLayer((128,32,32), 0.95, name='bn2'),
-                  ReLU(name='relu2'),
-                  Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', name='conv3')])  # 3
+graph.add_layer(BatchNormalization3DLayer((128,32,32), 0.95))                                   # 9
+graph.add_layer(ReLU())                                                                         # 10
+graph.add_layer(Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', use_bias=False))    # 11
+graph.add_layer(BatchNormalization3DLayer((128,32,32), 0.95))                                   # 12
+graph.add_layer(ReLU())                                                                         # 13
+graph.add_layer(Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half'))                    # 14
+graph.add_layer(MergeAddLayer((128,32,32)), get_from=[-1,-7])                                   # 15
 
-graph.merge_graph(graph_res1, 'add')
-res2 = graph.get_output()
+graph.add_layer(BatchNormalization3DLayer((128,32,32), 0.95))                                   # 16
+graph.add_layer(ReLU())                                                                         # 17
 
-graph_res2 = SimpleGraph(experiment_name + '_res2')
-graph_res2.add_input(res2)
+graph.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (3,3), 'half', (2,2), use_bias=False))     # 18
+graph.add_layer(BatchNormalization3DLayer((256,16,16), 0.95))                                   # 19
+graph.add_layer(ReLU())                                                                         # 20
+graph.add_layer(Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half'))                    # 21
+graph.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (1,1), 'valid', (2,2)), get_from=[-5])     # 22
+graph.add_layer(MergeAddLayer((256,16,16)), get_from=[-1,-2])                                   # 23
 
-# block 1_2
-graph.add_layers([BatchNormalization3DLayer((128,32,32), 0.95, name='bn3'),
-                  ReLU(name='relu3'),
-                  Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', use_bias=False, name='conv4'),  # 4
-                  BatchNormalization3DLayer((128,32,32), 0.95, name='bn4'),
-                  ReLU(name='relu4'),
-                  Convolution3DLayer((128,32,32), (128,32,32), (3,3), 'half', name='conv5')])  # 5
+graph.add_layer(BatchNormalization3DLayer((256,16,16), 0.95))                                   # 24
+graph.add_layer(ReLU())                                                                         # 25
+graph.add_layer(Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', use_bias=False))    # 26
+graph.add_layer(BatchNormalization3DLayer((256,16,16), 0.95))                                   # 27
+graph.add_layer(ReLU())                                                                         # 28
+graph.add_layer(Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half'))                    # 29
+graph.add_layer(MergeAddLayer((256,16,16)), get_from=[-1,-7])                                   # 30
 
-graph.merge_graph(graph_res2, 'add')
-graph.add_layers([BatchNormalization3DLayer((128,32,32), 0.95, name='bn5'),
-                  ReLU(name='relu5')])
-res3 = graph.get_output()
+graph.add_layer(BatchNormalization3DLayer((256,16,16), 0.95))                                   # 31
+graph.add_layer(ReLU())                                                                         # 32
 
-graph_res3 = SimpleGraph(experiment_name + '_res3')
-graph_res3.add_input(res3)
-graph_res3.add_layer(Convolution3DLayer((128,32,32), (256,16,16), (1,1), 'valid', (2,2), name='conv_res3'))
+graph.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (3,3), 'half', (2,2), use_bias=False))       # 33
+graph.add_layer(BatchNormalization3DLayer((512,8,8), 0.95))                                     # 34
+graph.add_layer(ReLU())                                                                         # 35
+graph.add_layer(Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half'))                        # 36
+graph.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (1,1), 'valid', (2,2)), get_from=[-5])     # 37
+graph.add_layer(MergeAddLayer((256,16,16)), get_from=[-1,-2])                                   # 38
 
-# block 2_1
-graph.add_layers([Convolution3DLayer((128,32,32), (256,16,16), (3,3), 'half', (2,2), use_bias=False, name='conv6'),  # 6
-                  BatchNormalization3DLayer((256,16,16), 0.95, name='bn6'),
-                  ReLU(name='relu6'),
-                  Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', name='conv7')])  # 7
+graph.add_layer(BatchNormalization3DLayer((512,8,8), 0.95))                                     # 39
+graph.add_layer(ReLU())                                                                         # 40
+graph.add_layer(Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', use_bias=False))        # 41
+graph.add_layer(BatchNormalization3DLayer((512,8,8), 0.95))                                     # 42
+graph.add_layer(ReLU())                                                                         # 43
+graph.add_layer(Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half'))                        # 44
+graph.add_layer(MergeAddLayer((512,8,8)), get_from=[-1,-7])                                     # 45
 
-graph.merge_graph(graph_res3, 'add')
-res4 = graph.get_output()
+graph.add_layer(BatchNormalization3DLayer((512,8,8), 0.95))                                     # 46
+graph.add_layer(ReLU())                                                                         # 47
 
-graph_res4 = SimpleGraph(experiment_name + '_res4')
-graph_res4.add_input(res4)
+graph.add_layer(GlobalAveragePooling3DLayer((512,8,8), (512,)))                                 # 48
+graph.add_layer(DenseLayer((512,), (10,)))                                                      # 49
+graph.add_layer(Softmax())                                                                      # 50
 
-# block 2_2
-graph.add_layers([BatchNormalization3DLayer((256,16,16), 0.95, name='bn7'),
-                  ReLU(name='relu7'),
-                  Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', use_bias=False, name='conv8'),  # 8
-                  BatchNormalization3DLayer((256,16,16), 0.95, name='bn8'),
-                  ReLU(name='relu8'),
-                  Convolution3DLayer((256,16,16), (256,16,16), (3,3), 'half', name='conv9')])  # 9
+graph.add_layer(CategoricalCrossentropy())                                                      # 51
+graph.add_layer(CategoricalAccuracy(), get_from=[-2])                                           # 52
 
-graph.merge_graph(graph_res4, 'add')
-graph.add_layers([BatchNormalization3DLayer((256,16,16), 0.95, name='bn9'),
-                  ReLU(name='relu9')])
-res5 = graph.get_output()
+loss, loss_layer = graph.get_output({0:[x], -2:[y]}, -2, 0)
+accuracy, accuracy_layer = graph.get_output({0:[x], -1:[y]}, -1, 0)
 
-graph_res5 = SimpleGraph(experiment_name + '_res5')
-graph_res5.add_input(res5)
-graph_res5.add_layer(Convolution3DLayer((256,16,16), (512,8,8), (1,1), 'valid', (2,2), name='conv_res5'))
-
-# block 3_1
-graph.add_layers([Convolution3DLayer((256,16,16), (512,8,8), (3,3), 'half', (2,2), use_bias=False, name='conv10'),  # 10
-                  BatchNormalization3DLayer((512,8,8), 0.95, name='bn10'),
-                  ReLU(name='relu10'),
-                  Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', name='conv11')])  # 11
-
-graph.merge_graph(graph_res5, 'add')
-res6 = graph.get_output()
-
-graph_res6 = SimpleGraph(experiment_name + '_res6')
-graph_res6.add_input(res6)
-
-# block 3_2
-graph.add_layers([BatchNormalization3DLayer((512,8,8), 0.95, name='bn11'),
-                  ReLU(name='relu11'),
-                  Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', use_bias=False, name='conv12'),  # 12
-                  BatchNormalization3DLayer((512,8,8), 0.95, name='bn12'),
-                  ReLU(name='relu12'),
-                  Convolution3DLayer((512,8,8), (512,8,8), (3,3), 'half', name='conv13')])  # 13
-
-graph.merge_graph(graph_res6, 'add')
-
-# end
-graph.add_layers([BatchNormalization3DLayer((512,8,8), 0.95, name='bn14'),
-                  ReLU(name='relu14'),
-                  GlobalAveragePooling3DLayer((512,8,8), (512,), name='pool15'),
-                  DenseLayer((512,), (1024,), use_bias=False, name='dense15'),
-                  BatchNormalization1DLayer((1024,), 0.95, name='bn15'),
-                  ReLU(name='relu15'),
-                  DenseLayer((1024,), (1024,), use_bias=False, name='dense16'),
-                  BatchNormalization1DLayer((1024,), 0.95, name='bn16'),
-                  ReLU(name='relu16'),
-                  DenseLayer((1024,), (10,), name='dense17'),
-                  Softmax(name='softmax1')])
-
-loss = CategoricalCrossentropy().get_loss(graph.get_output(), y)
-accuracy = CategoricalAccuracy().get_loss(graph.get_output(), y)
-
-graph_params = graph.get_params()
-graph_updates = graph.get_updates()
+graph_params = graph.get_params(loss_layer)
+graph_updates = graph.get_updates(loss_layer)
 
 #================Prepare arguments================#
 
 HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
-print_tags_in_params(graph_params)
+# print_tags_in_params(graph_params)
 print_params_num(graph_params)
 
 optimizer = RMSprop(0.001)  # Adam(0.002)
@@ -209,7 +173,7 @@ test_func = theano.function(inputs=graph_inputs,
                             allow_input_downcast=True)
 
 test_func_output = theano.function(inputs=[x],
-                                   outputs=T.argmax(graph.get_output(), axis=-1),
+                                   outputs=T.argmax(graph.get_output({0:[x]}, -3, 0)[0], axis=-1),
                                    allow_input_downcast=True)
 
 
@@ -217,12 +181,6 @@ test_func_output = theano.function(inputs=[x],
 
 def train_trainset():
     graph.change_flag(1)
-    graph_res1.change_flag(1)
-    graph_res2.change_flag(1)
-    graph_res3.change_flag(1)
-    graph_res4.change_flag(1)
-    graph_res5.change_flag(1)
-    graph_res6.change_flag(1)
     train_loss = []
     train_accuracy = []
     for index in range(train_gen.max_index):
@@ -235,12 +193,6 @@ def train_trainset():
 
 def test_validset():
     graph.change_flag(-1)
-    graph_res1.change_flag(-1)
-    graph_res2.change_flag(-1)
-    graph_res3.change_flag(-1)
-    graph_res4.change_flag(-1)
-    graph_res5.change_flag(-1)
-    graph_res6.change_flag(-1)
     valid_loss = []
     valid_accuracy = []
     for index in range(valid_gen.max_index):
@@ -253,12 +205,6 @@ def test_validset():
 
 def test_testset():
     graph.change_flag(-1)
-    graph_res1.change_flag(-1)
-    graph_res2.change_flag(-1)
-    graph_res3.change_flag(-1)
-    graph_res4.change_flag(-1)
-    graph_res5.change_flag(-1)
-    graph_res6.change_flag(-1)
     test_accuracy = []
     for index in range(test_gen.max_index):        
         confusion_matrix = np.zeros((128, 10)).astype('int32')

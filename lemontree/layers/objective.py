@@ -330,16 +330,16 @@ class SquareLoss(BaseLayer):
         # do
         if mask is None:
             if self.mode == 'mean':
-                return T.mean(T.square(input_ - label))
+                return 0.5 * T.mean(T.square(input_ - label))
             elif self.mode == 'sum':
-                return T.sum(T.square(input_ - label))
+                return 0.5 * T.sum(T.square(input_ - label))
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
         else:
             if self.mode == 'mean':
-                return T.sum(T.sum(T.square(input_ - label), axis=-1) * mask) / T.sum(mask)
+                return 0.5 * T.sum(T.sum(T.square(input_ - label), axis=-1) * mask) / T.sum(mask)
             elif self.mode == 'sum':
-                return T.sum(T.sum(T.square(input_ - label), axis=-1) * mask)
+                return 0.5 * T.sum(T.sum(T.square(input_ - label), axis=-1) * mask)
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
@@ -375,6 +375,46 @@ class WordPerplexity(BaseLayer):
         else:
             return T.pow(2, -T.sum(T.log2(input_[T.arange(label.shape[0]), label]) * mask) / T.sum(mask))
 
+
+class KLDivergence(BaseLayer):
+
+    def __init__(self, input_shape, output_shape):
+        """
+        This function initializes the class.
+        The shape of two tensor should be double.
+
+        Parameters
+        ----------
+        input_shape: tuple
+            a tuple of three values, i.e., (input channel, input width, input height).
+        output_shape: tuple
+            a tuple of single value, i.e., (input channel,) or (input dim,).
+        """
+        super(KLDivergence, self).__init__()
+        # check asserts
+        assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple.'
+        assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple.'
+        assert output_shape[0] * 2 == input_shape[0], '"output_shape" is half of "input_shape", since it contains mu and logvar.'
+        # set members
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Creates symbolic function to compute output from an input.
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        mu = input_[:, :self.output_shape[0]]
+        logvar = input_[:, self.output_shape[0]:]
+        return 0.5 * T.mean(T.square(mu) + T.exp(logvar) - logvar - 1)
 
 # TODO: Fix L1, L2 to work!
 '''

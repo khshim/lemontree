@@ -12,6 +12,7 @@ import scipy.misc
 from theano.sandbox.rng_mrg import MRG_RandomStreams as MRG
 
 from lemontree.data.mnist import MNIST
+from lemontree.graphs.graph import SimpleGraph
 from lemontree.generators.generator import SimpleGenerator
 from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
@@ -19,8 +20,9 @@ from lemontree.graphs.graph import SimpleGraph
 from lemontree.layers.activation import ReLU, Sigmoid, Tanh
 from lemontree.layers.dense import DenseLayer
 from lemontree.layers.normalization import BatchNormalization1DLayer
+from lemontree.layers.variational import Latent1DLayer
 from lemontree.initializers import HeNormal
-from lemontree.objectives import BinaryCrossentropy
+from lemontree.layers.objective import BinaryCrossentropy, KLDivergence
 from lemontree.optimizers import Adam
 from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
@@ -29,8 +31,8 @@ from lemontree.utils.graph_utils import get_inputs_of_variables
 from lemontree.utils.data_utils import split_data
 
 np.random.seed(9999)
-base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-# base_datapath = 'D:/Dropbox/Project/data/'
+# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+base_datapath = 'D:/Dropbox/Project/data/'
 # base_datapath = '/home/khshim/data/'
 experiment_name = 'mnist_vae'
 
@@ -40,11 +42,8 @@ mnist = MNIST(base_datapath, 'flat')
 train_data = mnist.train_data
 train_data, valid_data = split_data(train_data, 0.9)
 test_data = mnist.test_data
-train_data = train_data * 2 - 1  # convert to [-1, 1]
 train_gen = SimpleGenerator([train_data], 250, 'train')
-valid_data = valid_data * 2 - 1  # convert to [-1, 1]
 valid_gen = SimpleGenerator([valid_data], 250, 'valid')
-test_data = test_data * 2 - 1  # convert to [-1, 1]
 test_gen = SimpleGenerator([test_data], 250, 'test')
 
 rng = MRG(9999)
@@ -54,63 +53,38 @@ rng = MRG(9999)
 x = T.fmatrix('X')
 z = T.fmatrix('Z')
 
-# encoder
+graph = SimpleGraph(experiment_name, 250)
+graph.add_layer(DenseLayer((784,), (1024,), use_bias=False), get_from=[])
+graph.add_layer(BatchNormalization1DLayer((1024,)))
+graph.add_layer(ReLU(0.1))
+graph.add_layer(DenseLayer((1024,), (1024,), use_bias=False))
+graph.add_layer(BatchNormalization1DLayer((1024,)))
+graph.add_layer(ReLU(0.1))
+graph.add_layer(DenseLayer((1024,), (256,)))
+graph.add_layer(Latent1DLayer((256,), (128,)))
 
-enc_dense1 = DenseLayer((784,), (1024,), use_bias=False, name='enc_dense1')
-enc_bn1 = BatchNormalization1DLayer((1024,), name='enc_bn1')
-enc_dense2 = DenseLayer((1024,), (1024,), use_bias=False,  name='enc_dense2')
-enc_bn2 = BatchNormalization1DLayer((1024,), name='enc_bn2')
-enc_dense_mv = DenseLayer((1024,), (256,), name='enc_dense_mv')
+graph.add_layer(DenseLayer((128,), (1024,), use_bias=False))
+graph.add_layer(BatchNormalization1DLayer((1024,)))
+graph.add_layer(ReLU(0.1))
+graph.add_layer(DenseLayer((1024,), (1024,), use_bias=False))
+graph.add_layer(BatchNormalization1DLayer((1024,)))
+graph.add_layer(ReLU(0.1))
+graph.add_layer(DenseLayer((1024,), (784,)))
+graph.add_layer(Sigmoid())
 
-enc_feature = enc_dense1.get_output(x)
-enc_feature = enc_bn1.get_output(enc_feature)
-enc_feature= ReLU(0.1).get_output(enc_feature)
-enc_feature = enc_dense2.get_output(enc_feature)
-enc_feature = enc_bn2.get_output(enc_feature)
-enc_feature = ReLU(0.1).get_output(enc_feature)
-enc_feature = enc_dense_mv.get_output(enc_feature)
+graph.add_layer(BinaryCrossentropy(True))
+graph.add_layer(KLDivergence((256,), (128,)), get_from=[-11])
 
-enc_mu = enc_feature[:, :128]
-enc_logvar = enc_feature[:, 128:]
-
-latent = enc_mu + T.sqrt(T.exp(enc_logvar)) * rng.normal((250, 128), 0, 1)
-
-# decoder
-
-dec_dense1 = DenseLayer((128,), (1024,), use_bias=False, name='dec_dense1')
-dec_bn1 = BatchNormalization1DLayer((1024,), name='dec_bn1')
-dec_dense2 = DenseLayer((1024,), (1024,), use_bias=False, name='dec_dense2')
-dec_bn2 = BatchNormalization1DLayer((1024,), name='dec_bn2')
-dec_dense3 = DenseLayer((1024,), (784,), name='dec_dense3')
-
-
-dec_output = dec_dense1.get_output(latent)
-dec_output = dec_bn1.get_output(dec_output)
-dec_output = ReLU(0.1).get_output(dec_output)
-dec_output = dec_dense2.get_output(dec_output)
-dec_output = dec_bn2.get_output(dec_output)
-dec_output = ReLU(0.1).get_output(dec_output)
-dec_output = dec_dense3.get_output(dec_output)
-dec_output = Tanh().get_output(dec_output)
-
-graph_params = enc_dense1.get_params() + enc_bn1.get_params() + enc_dense2.get_params() + enc_bn2.get_params() + enc_dense_mv.get_params() +\
-    dec_dense1.get_params() + dec_bn1.get_params() + dec_dense2.get_params() + dec_bn2.get_params() + dec_dense3.get_params()
-
-latent_loss = 0.5 * T.mean(T.square(enc_mu) + T.exp(enc_logvar) - enc_logvar - 1)
-reconstruct_loss = BinaryCrossentropy(True).get_loss((dec_output + 1) / 2, (x + 1) /2)
+latent_loss, _ = graph.get_output({0:[x]}, -1, 0)
+reconstruct_loss, _ = graph.get_output({0:[x], -2:[x]}, -2, 0)
 loss = latent_loss + reconstruct_loss
+
+graph_params = graph.get_params()
+graph_updates = graph.get_updates()
 
 # generator
 
-gen_output = dec_dense1.get_output(z)
-gen_output = dec_bn1.get_output(gen_output)
-gen_output = ReLU(0.1).get_output(gen_output)
-gen_output = dec_dense2.get_output(gen_output)
-gen_output = dec_bn2.get_output(gen_output)
-gen_output = ReLU(0.1).get_output(gen_output)
-gen_output = dec_dense3.get_output(gen_output)
-gen_output = Tanh().get_output(gen_output)
-gen_output = (gen_output + 1) / 2
+gen_output, _ = graph.get_output({-10:[z]}, -3, -10)
 
 #================Prepare arguments================#
 
@@ -123,7 +97,7 @@ optimizer_updates = optimizer.get_updates(loss, graph_params)
 optimizer_params = optimizer.get_params()
 
 total_params = optimizer_params + graph_params
-total_updates = optimizer_updates
+total_updates = merge_dicts([optimizer_updates, graph_updates])
 
 params_saver = SimpleParameter(total_params, experiment_name + '_params/')
 params_saver.save_params()

@@ -77,10 +77,10 @@ class Pooling3DLayer(BaseLayer):
         TensorVariable
         """
         return pool_2d(input_,
-                       ds=self.kernel_shape,
+                       ws=self.kernel_shape,
                        ignore_border=True,  # if you don't want to ignore border, use padding
-                       st=self.stride,
-                       padding=self.padding,
+                       stride=self.stride,
+                       pad=self.padding,
                        mode=self.pool_mode)
 
 
@@ -130,10 +130,10 @@ class GlobalAveragePooling3DLayer(BaseLayer):
         TensorVariable
         """
         result = pool_2d(input_,
-                         ds=self.input_shape[1:],
+                         ws=self.input_shape[1:],
                          ignore_border=True,
-                         st=self.input_shape[1:],
-                         padding=self.padding,
+                         stride=self.input_shape[1:],
+                         pad=self.padding,
                          mode='average_exc_pad')  # result is 4D tensor yet, (batch size, output channel, 1, 1)
         return T.reshape(result, (input_.shape[0], input_.shape[1]))  # flatten to 2D matrix
 

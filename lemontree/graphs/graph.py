@@ -83,8 +83,9 @@ class SimpleGraph(object):
 
         Parameters
         ----------
-        input_: TensorVariable
-            a TensorVariable of required shape, for initial input.
+        input_: dictionary
+            a dictionary that consists additional inputs for each layers.
+            a value is list of TensorVariables.
         layer_out: integer
             an integer that which layer output will be returned.
         layer_in: integer, default: 0
@@ -102,6 +103,10 @@ class SimpleGraph(object):
         if layer_out < 0:
             layer_out = len(self.layers) + layer_out
         assert layer_in <= layer_out, '"layer_out" should be bigger or equal to "layer_in".'
+        for kk in inputs_.keys():
+            if kk < 0:
+                inputs_[kk + len(self.layers)] = inputs_[kk]
+                del inputs_[kk]
 
         # recursively find required layers
                 
@@ -116,7 +121,7 @@ class SimpleGraph(object):
         required = find_required_layers(layer_out) + [layer_out]
         required = list(sorted(set(required)))
         required = [item for item in required if item >= layer_in]
-        print('... Required Layers', required)
+        print('Required Layers', required)
         assert layer_in in required, 'Somewhere disconnected.'
 
         # check required
@@ -128,11 +133,13 @@ class SimpleGraph(object):
         intermediate = {}
         for cc in required:
             if cc == layer_in:
-                intermediate[cc] = self.layers[cc].get_output(*inputs_)
+                intermediate[cc] = self.layers[cc].get_output(*inputs_[cc])
             else:
                 cc_input = ()
                 for dd in self.connections[cc][0]:
                     cc_input += (intermediate[dd],)
+                if cc in inputs_.keys():
+                    cc_input += tuple(inputs_[cc])
                 intermediate[cc] = self.layers[cc].get_output(*cc_input)
             
         return intermediate[layer_out], required

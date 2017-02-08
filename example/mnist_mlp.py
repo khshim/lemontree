@@ -18,7 +18,7 @@ from lemontree.layers.activation import ReLU, Softmax
 from lemontree.layers.dense import DenseLayer
 from lemontree.layers.normalization import BatchNormalization1DLayer
 from lemontree.initializers import HeNormal
-from lemontree.objectives import CategoricalAccuracy, CategoricalCrossentropy
+from lemontree.layers.objective import CategoricalAccuracy, CategoricalCrossentropy
 from lemontree.optimizers import Adam
 from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
@@ -28,8 +28,8 @@ from lemontree.utils.data_utils import int_to_onehot
 
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-# base_datapath = 'D:/Dropbox/Project/data/'
-base_datapath = '/home/khshim/data/'
+base_datapath = 'D:/Dropbox/Project/data/'
+# base_datapath = '/home/khshim/data/'
 experiment_name = 'mnist_mlp'
 
 #================Prepare data================#
@@ -49,36 +49,31 @@ valid_gen = SimpleGenerator([valid_data, valid_label], 250, 'valid')
 x = T.fmatrix('X')
 y = T.ivector('y')
 
-graph = SimpleGraph(experiment_name)
-graph.add_input(x)
-graph.add_layers([DenseLayer((784,),(1024,), use_bias=False, name='dense1'),
-                  BatchNormalization1DLayer((1024,), name='bn1'),
-                  ReLU(name='relu1'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense2'),
-                  BatchNormalization1DLayer((1024,), name='bn2'),
-                  ReLU(name='relu2'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense3'),
-                  BatchNormalization1DLayer((1024,), name='bn3'),
-                  ReLU(name='relu3'),
-                  DenseLayer((1024,),(1024,), use_bias=False, name='dense4'),
-                  BatchNormalization1DLayer((1024,), name='bn4'),
-                  ReLU(name='relu4'),
-                  DenseLayer((1024,),(10,), name='dense5'),
-                  Softmax(name='softmax1')])
+graph = SimpleGraph(experiment_name, 250)
+graph.add_layer(DenseLayer((784,),(1024,), use_bias=False), get_from=[])    # 0
+graph.add_layer(BatchNormalization1DLayer((1024,)))                         # 1
+graph.add_layer(ReLU())                                                     # 2
+for i in range(2):
+    graph.add_layer(DenseLayer((1024,),(1024,), use_bias=False))                # 3 6
+    graph.add_layer(BatchNormalization1DLayer((1024,)))                         # 4 7
+    graph.add_layer(ReLU())                                                     # 5 8
+graph.add_layer(DenseLayer((1024,),(10,)))                                  # 9
+graph.add_layer(Softmax())                                                  # 10
+graph.add_layer(CategoricalCrossentropy())                                  # 11
+graph.add_layer(CategoricalAccuracy(), get_from=[-2])                       # 12
 
-graph_params = graph.get_params()
-graph_updates = graph.get_updates()
+loss, loss_layers = graph.get_output({0:[x], -2:[y]}, -2, 0)
+accuracy, accuracy_layers = graph.get_output({0:[x], -1:[y]}, -1, 0)
 
-loss = CategoricalCrossentropy().get_loss(graph.get_output(), y)
-accuracy = CategoricalAccuracy().get_loss(graph.get_output(), y)
+graph_params = graph.get_params(loss_layers)
+graph_updates = graph.get_updates(loss_layers)
 
 #================Prepare arguments================#
 
 HeNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
-print_tags_in_params(graph_params)
 print_params_num(graph_params)
 
-optimizer = Adam(0.01)
+optimizer = Adam(0.001)
 optimizer_updates = optimizer.get_updates(loss, graph_params)
 optimizer_params = optimizer.get_params()
 
