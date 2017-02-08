@@ -61,10 +61,6 @@ class DropoutLayer(BaseLayer):
         ---------
         new_flag: int (or float)
             a single scalar value to be a new flag.
-
-        Returns
-        -------
-        None.
         """
         self.flag.set_value(float(new_flag)) # 1: train / -1: inference
 

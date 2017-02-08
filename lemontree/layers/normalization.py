@@ -14,7 +14,7 @@ class BatchNormalization1DLayer(BaseLayer):
     """
     This class implements batch normalization for 1D representation.
     """
-    def __init__(self, input_shape, momentum=0.99, mean_only=False, name=None):
+    def __init__(self, input_shape, momentum=0.99, mean_only=False):
         """
         This function initializes the class.
         Input is 2D tenor, output is 2D tensor.
@@ -31,14 +31,8 @@ class BatchNormalization1DLayer(BaseLayer):
             using exponential moving average.
         mean_only: bool, default: False
             a bool value whether use substract mean only, not divide with std.
-        name: string
-            a string name of this layer.
-
-        Returns
-        -------
-        None.
         """
-        super(BatchNormalization1DLayer, self).__init__(name)
+        super(BatchNormalization1DLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple with single value.'
         assert momentum > 0 and momentum < 1, '"momentum" should be a float value in range (0, 1).'
@@ -50,8 +44,11 @@ class BatchNormalization1DLayer(BaseLayer):
         self.mean_only = mean_only
         self.updates = OrderedDict()
 
-        # create shared variables
+    def set_shared(self):
         """
+        This function overrides the parents' one.
+        Set shared variables.
+
         Shared Variables
         ----------------
         flag: scalar
@@ -65,18 +62,18 @@ class BatchNormalization1DLayer(BaseLayer):
         beta: 1D vector
             shape is (input dim,).
         """
-        self.flag = theano.shared(1, 'flag')  # 1: train / -1: inference
+        self.flag = theano.shared(1, self.name + '_flag')  # 1: train / -1: inference
         self.flag.tags = ['flag', self.name]
-        bn_mean = np.zeros(input_shape).astype(theano.config.floatX)  # initialize with zero
+        bn_mean = np.zeros((self.input_shape[0],)).astype(theano.config.floatX)  # initialize with zero
         self.bn_mean = theano.shared(bn_mean, self.name + '_bn_mean')
         self.bn_mean.tags = ['bn_mean', self.name]
-        bn_std = np.ones(input_shape).astype(theano.config.floatX)  # initialize with one
+        bn_std = np.ones((self.input_shape[0],)).astype(theano.config.floatX)  # initialize with one
         self.bn_std = theano.shared(bn_std, self.name + '_bn_std')
         self.bn_std.tags = ['bn_std', self.name]
-        gamma = np.ones(input_shape).astype(theano.config.floatX)  # initialize with one
+        gamma = np.ones((self.input_shape[0],)).astype(theano.config.floatX)  # initialize with one
         self.gamma = theano.shared(gamma, self.name + '_gamma')
         self.gamma.tags = ['gamma', self.name]
-        beta = np.zeros(input_shape).astype(theano.config.floatX)  # initialize with zero
+        beta = np.zeros((self.input_shape[0],)).astype(theano.config.floatX)  # initialize with zero
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tags = ['beta', self.name]
 
@@ -89,10 +86,6 @@ class BatchNormalization1DLayer(BaseLayer):
         ---------
         new_flag: int (or float)
             a single scalar value to be a new flag.
-
-        Returns
-        -------
-        None.
         """
         self.flag.set_value(float(new_flag))  # 1: train, -1: inference
 
@@ -146,10 +139,6 @@ class BatchNormalization1DLayer(BaseLayer):
         This function overrides the parents' one.
         Returns interal layer parameters.
 
-        Parameters
-        ----------
-        None.
-
         Returns
         -------
         list
@@ -161,10 +150,6 @@ class BatchNormalization1DLayer(BaseLayer):
         """
         This function overrides the parents' one.
         Returns internal updates.
-
-        Parameters
-        ----------
-        None.
 
         Returns
         -------
@@ -178,7 +163,7 @@ class BatchNormalization3DLayer(BaseLayer):
     """
     This class implements batch normalization for 3D representation.
     """
-    def __init__(self, input_shape, momentum=0.99, mean_only=False, name=None):
+    def __init__(self, input_shape, momentum=0.99, mean_only=False):
         """
         This function initializes the class.
         Input is 4D tenor, output is 4D tensor.
@@ -195,14 +180,8 @@ class BatchNormalization3DLayer(BaseLayer):
             using exponential moving average.
         mean_only: bool, default: False
             a bool value whether use substract mean only, not divide with std.
-        name: string
-            a string name of this layer.
-
-        Returns
-        -------
-        None.
         """
-        super(BatchNormalization3DLayer, self).__init__(name)
+        super(BatchNormalization3DLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three value.'
         assert momentum > 0 and momentum < 1, '"momentum" should be a float value in range (0, 1).'
@@ -214,8 +193,11 @@ class BatchNormalization3DLayer(BaseLayer):
         self.mean_only = mean_only
         self.updates = OrderedDict()
 
-        # create shared variables
+    def set_shared(self):
         """
+        This function overrides the parents' one.
+        Set shared variables.
+
         Shared Variables
         ----------------
         flag: scalar
@@ -229,18 +211,18 @@ class BatchNormalization3DLayer(BaseLayer):
         beta: 1D vector
             shape is (input channel,).
         """
-        self.flag = theano.shared(1, 'flag')  # 1: train / -1: inference
-        self.flag.tag = 'flag'
-        bn_mean = np.zeros((input_shape[0],)).astype(theano.config.floatX)
+        self.flag = theano.shared(1, self.name + '_flag')  # 1: train / -1: inference
+        self.flag.tags = ['flag', self.name]
+        bn_mean = np.zeros((self.input_shape[0],)).astype(theano.config.floatX)
         self.bn_mean = theano.shared(bn_mean, self.name + '_bn_mean')
         self.bn_mean.tags = ['bn_mean', self.name]
-        bn_std = np.ones((input_shape[0],)).astype(theano.config.floatX)
+        bn_std = np.ones((self.input_shape[0],)).astype(theano.config.floatX)
         self.bn_std = theano.shared(bn_std, self.name + '_bn_std')
         self.bn_std.tags = ['bn_std', self.name]
-        gamma = np.ones((input_shape[0],)).astype(theano.config.floatX)
+        gamma = np.ones((self.input_shape[0],)).astype(theano.config.floatX)
         self.gamma = theano.shared(gamma, self.name + '_gamma')
         self.gamma.tags = ['gamma', self.name]
-        beta = np.zeros((input_shape[0],)).astype(theano.config.floatX)
+        beta = np.zeros((self.input_shape[0],)).astype(theano.config.floatX)
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tags = ['beta', self.name]
 
@@ -253,10 +235,6 @@ class BatchNormalization3DLayer(BaseLayer):
         ---------
         new_flag: int (or float)
             a single scalar value to be a new flag.
-
-        Returns
-        -------
-        None.
         """
         self.flag.set_value(float(new_flag))  # 1: train, -1: inference
 
@@ -312,10 +290,6 @@ class BatchNormalization3DLayer(BaseLayer):
         This function overrides the parents' one.
         Returns interal layer parameters.
 
-        Parameters
-        ----------
-        None.
-
         Returns
         -------
         list
@@ -328,10 +302,6 @@ class BatchNormalization3DLayer(BaseLayer):
         This function overrides the parents' one.
         Returns internal updates.
 
-        Parameters
-        ----------
-        None.
-
         Returns
         -------
         OrderedDict
@@ -342,50 +312,49 @@ class BatchNormalization3DLayer(BaseLayer):
 
 class LayerNormalization1DLayer(BaseLayer):
 
-    def __init__(self, input_shape, momentum=0.99, name=None):
-        super(LayerNormalization1DLayer, self).__init__(name)
+    def __init__(self, input_shape, momentum=0.99):
+        super(LayerNormalization1DLayer, self).__init__()
         self.input_shape = input_shape
         self.momentum = momentum
-        gamma = np.ones((input_shape,)).astype(theano.config.floatX)
-        self.gamma = theano.shared(gamma, self.name + '_gamma')
-        self.gamma.tag = 'gamma'
-        beta = np.zeros((input_shape,)).astype(theano.config.floatX)
-        self.beta = theano.shared(beta, self.name + '_beta')
-        self.beta.tag = 'beta'
 
-    def get_output(self, input):
-        dim_mean = T.mean(input, axis=1)
-        dim_std = T.std(input, axis=1)
-        return self.gamma * (input - dim_mean.dimshuffle(0, 'x')) / (dim_std.dimshuffle(0, 'x') + 1e-7) + self.beta
+    def set_shared(self):
+        gamma = np.ones((self.input_shape[0],)).astype(theano.config.floatX)
+        self.gamma = theano.shared(gamma, self.name + '_gamma')
+        self.gamma.tags = ['gamma', self.name]
+        beta = np.zeros((self.input_shape[0],)).astype(theano.config.floatX)
+        self.beta = theano.shared(beta, self.name + '_beta')
+        self.beta.tags = ['beta', self.name]
+
+    def get_output(self, input_):
+        dim_mean = T.mean(input_, axis=1)
+        dim_std = T.std(input_, axis=1)
+        return self.gamma * (input_ - dim_mean.dimshuffle(0, 'x')) / (dim_std.dimshuffle(0, 'x') + 1e-7) + self.beta
 
     def get_params(self):
         return [self.gamma, self.beta]
 
-    def get_updates(self):
-        return OrderedDict()
 
+class LayerNormalization3DLayer(BaseLayer):
 
-class LayerNormalization2DLayer(BaseLayer):
-
-    def __init__(self, input_shape, momentum=0.99, name=None):
-        super(LayerNormalization2DLayer, self).__init__(name)
+    def __init__(self, input_shape, momentum=0.99):
+        super(LayerNormalization3DLayer, self).__init__()
         self.input_shape = input_shape  # (number of maps, width of map, height of map)
         assert len(self.input_shape) == 3
         self.momentum = momentum
-        gamma = np.ones((input_shape[0],)).astype(theano.config.floatX)
-        self.gamma = theano.shared(gamma, self.name + '_gamma')
-        self.gamma.tag = 'gamma'
-        beta = np.zeros((input_shape[0],)).astype(theano.config.floatX)
-        self.beta = theano.shared(beta, self.name + '_beta')
-        self.beta.tag = 'beta'
 
-    def get_output(self, input):
-        dim_mean = T.mean(input, axis=[1, 2, 3])
-        dim_std = T.std(input, axis=[1, 2, 3])
-        return self.gamma.dimshuffle('x', 0, 'x', 'x') * (input - dim_mean.dimshuffle(0, 'x', 'x', 'x')) / (dim_std.dimshuffle(0, 'x', 'x', 'x') + 1e-7) + self.beta.dimshuffle('x', 0, 'x', 'x')
+    def set_shared(self):       
+        gamma = np.ones((self.input_shape[0],)).astype(theano.config.floatX)
+        self.gamma = theano.shared(gamma, self.name + '_gamma')
+        self.gamma.tags = ['gamma', self.name]
+        beta = np.zeros((self.input_shape[0],)).astype(theano.config.floatX)
+        self.beta = theano.shared(beta, self.name + '_beta')
+        self.beta.tags = ['beta', self.name]
+
+    def get_output(self, input_):
+        dim_mean = T.mean(input_, axis=[1, 2, 3])
+        dim_std = T.std(input_, axis=[1, 2, 3])
+        return self.gamma.dimshuffle('x', 0, 'x', 'x') * (input_ - dim_mean.dimshuffle(0, 'x', 'x', 'x')) / (dim_std.dimshuffle(0, 'x', 'x', 'x') + 1e-7) + self.beta.dimshuffle('x', 0, 'x', 'x')
 
     def get_params(self):
         return [self.gamma, self.beta]
 
-    def get_updates(self):
-        return OrderedDict()

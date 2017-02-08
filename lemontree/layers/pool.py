@@ -15,7 +15,7 @@ class Pooling3DLayer(BaseLayer):
     This class implements pooling for 3D representation.
     """
     def __init__(self, input_shape, output_shape,
-                 kernel_shape=(2, 2), pool_mode='max', stride=(2, 2), padding = (0,0), name=None):
+                 kernel_shape=(2, 2), pool_mode='max', stride=(2, 2), padding = (0,0)):
         """
         This function initializes the class.
         Input is 4D tensor, output is 4D tensor.
@@ -45,14 +45,8 @@ class Pooling3DLayer(BaseLayer):
         padding: tuple, default: (0, 0)
             a tuple of two value, i.e., (padding updown, padding leftright).
             a symmetric padding. padding first, pooling second.
-        name: string
-            a string name of this layer.
-
-        Returns
-        -------
-        None.
         """
-        super(Pooling3DLayer, self).__init__(name)
+        super(Pooling3DLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 3, '"output_shape" should be a tuple with three values.'
@@ -95,7 +89,7 @@ class GlobalAveragePooling3DLayer(BaseLayer):
     This class implements global average pooling for 3D representation.
     Global average pooling averages energy through each map (channel).
     """
-    def __init__(self, input_shape, output_shape, padding=(0,0), name=None):
+    def __init__(self, input_shape, output_shape, padding=(0,0)):
         """
         This function initializes the class.
         Input is 4D tensor, output is 2D tensor.
@@ -109,14 +103,8 @@ class GlobalAveragePooling3DLayer(BaseLayer):
         padding: tuple, default: (0, 0)
             a tuple of two value, i.e., (padding updown, padding leftright).
             a symmetric padding. padding first, pooling second.
-        name: string
-            a string name of this layer.
-
-        Returns
-        -------
-        None.
         """
-        super(GlobalAveragePooling3DLayer, self).__init__(name)
+        super(GlobalAveragePooling3DLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'

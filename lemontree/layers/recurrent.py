@@ -11,7 +11,7 @@ class BaseRecurrentLayer(BaseLayer):
     This class implements abstract base class for recurrent connection layers.
     """
     def __init__(self, gradient_steps=-1, output_return_index=[-1],
-                 precompute=False, unroll=False, backward=False, name=None):
+                 precompute=False, unroll=False, backward=False):
         """
         This function initializes the class.
         Arguments are the minimal requirements for theano scan operation.
@@ -36,14 +36,12 @@ class BaseRecurrentLayer(BaseLayer):
         backward: bool, default: False
             a bool value determine the direction of sequence.
             although using backward True, output will be original order.
-        name: string
-            a name of the class.
             
         Returns
         -------
         None.      
         """
-        super(BaseRecurrentLayer, self).__init__(name)
+        super(BaseRecurrentLayer, self).__init__()
         # check asserts
         assert isinstance(gradient_steps, int), '"gradient_steps" should be either positive integer or -1.'
         if output_return_index is not None:
@@ -60,7 +58,3 @@ class BaseRecurrentLayer(BaseLayer):
         self.backward = backward
         if unroll and gradient_steps <= 0:
             raise ValueError('Network Unroll requires exact gradient step')
-
-    def get_output(self, input_, masks, hidden_init):
-        raise NotImplementedError('Abstract class method')
-    

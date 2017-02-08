@@ -16,12 +16,14 @@ class SimpleGraph(object):
     Although name includes 'simple', this is not abstract class and can be used generally.
     In this sequential grpah, input and output are only one each.
     """
-    def __init__(self, name=None):
+    def __init__(self, name='graph', batch_size=-1):
         """
         This function initializes the class.
 
         Parameters
         ----------
+        batch_size: int, default: -1
+            an integer that is batch size (data per batch)
         name: string
             a string name of this graph.
 
@@ -31,57 +33,12 @@ class SimpleGraph(object):
         """
         # set members
         self.index = 0
-        self.name = name        
+        self.batch_size = batch_size
+        self.name = name
         self.layers = []  # stack layer class itself
+        self.connections = {}  # connections of layers {index: ([ins], [outs])}
         self.params = []  # collection of layer parameters
         self.updates = OrderedDict()  # collection of layer internal updates
-
-    def get_outputs(self):
-        """
-        This function gets current output of stacked layers.
-        A convenient function to get output.
-        Previous outputs are also stacked inside.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        TensorVariable
-            a TensorVariable which is not an input to other layers.
-        """
-        pass
-
-    def get_params(self):
-        """
-        This function returns parameters of whole layers.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        list
-            a list of (shared variable) parameters from layers.
-        """
-        pass
-
-    def get_updates(self):
-        """
-        This function returns internal updates from layers.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        OrderedDict
-            a dictionary of updates, not from optimizers.
-        """
-        pass
 
     def add_layer(self, layer, get_from=[-1]):
         """
@@ -92,35 +49,151 @@ class SimpleGraph(object):
         ----------
         layer: BaseLayer
             a Layer class that has a single input and a single output.
-
-        Returns
-        -------
-        None.
+        get_from: list, default: [-1]
+            a list of connections that layer gets output from.
         """
+        # check asserts
+        assert isinstance(get_from, list), '"get_from" should be a list of required layers.'
+        if len(get_from) != 0:
+            for gf in get_from:
+                assert gf < self.index, '"all layer in "get_from" should be previously added layers.'
+
         # collect from input layer
         self.layers.append(layer)
+        layer.set_name(self.name + '_' + str(self.index) + '_' + layer.__class__.__name__)
+        layer.set_shared()
+        layer.set_batch_size(self.batch_size)
+        print('... Layer added', self.name + '_' + str(self.index) + '_' + layer.__class__.__name__)
 
-    def add_layers(self, layers):
+        # set connections
+        get_from_new = []
+        for gf in get_from:
+            if gf < 0:
+                get_from_new.append(self.index + gf)
+            else:
+                get_from_new.append(gf)
+        self.connections[self.index] = (get_from_new, [])
+        for gf in get_from_new:
+            self.connections[gf] = (self.connections[gf][0], self.connections[gf][1] + [self.index])
+        self.index += 1
+
+    def get_output(self, inputs_, layer_out, layer_in=0):
         """
-        This function adds multiple layers in one step.
-        Convinient function for removing the need of "add_layer" multiple times.
-        Simply iterates over list and add each layer one-by-one.
+        This function create Tensorvariable using graph structure.
 
         Parameters
         ----------
-        layers: list
-            a list of (BaseLayer) layers to be stacked in order.
+        input_: TensorVariable
+            a TensorVariable of required shape, for initial input.
+        layer_out: integer
+            an integer that which layer output will be returned.
+        layer_in: integer, default: 0
+            an integer that which layer will get the input.
 
         Returns
         -------
-        None.
+        TensorVariable
         """
         # check asserts
-        assert isinstance(layers, list), '"layers" should be a list of layer classes.'
-        
-        # iterate
-        for ly in layers:
-            self.add_layer(ly)
+        assert isinstance(layer_out, int), '"layer_out" should be a non-negative integer.'
+        assert isinstance(layer_in, int), '"layer_in" should be a non-negative integer.'
+        if layer_in < 0:
+            layer_in = len(self.layers) + layer_in
+        if layer_out < 0:
+            layer_out = len(self.layers) + layer_out
+        assert layer_in <= layer_out, '"layer_out" should be bigger or equal to "layer_in".'
+
+        # recursively find required layers
+                
+        def find_required_layers(index):
+            required = []
+            for cc in self.connections[index][0]:
+                required += find_required_layers(cc)
+            required = required + self.connections[index][0]
+            # print(required)
+            return required
+
+        required = find_required_layers(layer_out) + [layer_out]
+        required = list(sorted(set(required)))
+        required = [item for item in required if item >= layer_in]
+        print('... Required Layers', required)
+        assert layer_in in required, 'Somewhere disconnected.'
+
+        # check required
+        for cc in required:
+            if cc != layer_in:
+                assert all(self.connections[cc][0][id] in required for id in range(len(self.connections[cc][0]))), 'Somewhere disconnected.'
+
+        # compute outputs
+        intermediate = {}
+        for cc in required:
+            if cc == layer_in:
+                intermediate[cc] = self.layers[cc].get_output(*inputs_)
+            else:
+                cc_input = ()
+                for dd in self.connections[cc][0]:
+                    cc_input += (intermediate[dd],)
+                intermediate[cc] = self.layers[cc].get_output(*cc_input)
+            
+        return intermediate[layer_out], required
+    
+    def get_params(self, layers=None):
+        """
+        This function returns parameters of whole layers.
+
+        Parameters
+        ----------
+        layers: list, default: None
+            a list of layers that parameters should be returned.
+
+        Returns
+        -------
+        list
+            a list of (shared variable) parameters from layers.
+        """
+        # check asserts
+        if layers is not None:
+            assert isinstance(layers, list), '"layers" should be None or list.'
+
+        params = []
+        if layers is None:
+            for ll in self.layers:
+                params += ll.get_params()
+        else:
+            for ind, ll in enumerate(self.layers):
+                if ind in layers:
+                    params += ll.get_params()
+
+        return params
+
+    def get_updates(self, layers=None):
+        """
+        This function returns internal updates from layers.
+
+        Parameters
+        ----------
+        layers: list, default: None
+            a list of layers that parameters should be returned.
+
+        Returns
+        -------
+        OrderedDict
+            a dictionary of updates, not from optimizers.
+        """
+        # check asserts
+        if layers is not None:
+            assert isinstance(layers, list), '"layers" should be None or list.'
+
+        updates = OrderedDict()
+        if layers is None:
+            for ll in self.layers:
+                updates = merge_dicts([updates, ll.get_updates()])
+        else:
+            for ind, ll in enumerate(self.layers):
+                if ind in layers:
+                    updates = merge_dicts([updates, ll.get_updates()])
+
+        return updates
 
     def change_flag(self, flag):
         """
@@ -134,40 +207,8 @@ class SimpleGraph(object):
         flag: int (or float)
             a single scalar value to be a new flag.
             most usage is using flag as condition, flag > 0 or not.
-
-        Returns
-        -------
-        None.
         """
         # iterate
         for ll in self.layers:
             if hasattr(ll, 'flag'):  # if a layer need mode change, it should have 'flag' as member.
                 ll.change_flag(flag)  # 1: train / -1: evaluation
-
-    def merge_graph(self, target, mode='add'):
-        """
-        This function merge other graph in this graph.
-        Consider parameters, updates, and outputs.
-        Two outputs are merged by mode.
-        For ResNet, mode = 'add'.
-
-        Parameters
-        ----------
-        target: graph
-            a single graph that will be merged to the graph.
-        mode: string, default: 'add'
-            a string that how the graph will be merged.
-            currently only 'add' is supported.
-
-        Returns
-        -------
-        None.
-        """
-        # collect from target graph
-        self.params = self.params + target.params
-        self.updates = merge_dicts([self.updates, target.updates])
-        if mode == 'add':
-            self.outputs.append(self.get_output() + target.get_output())
-            print(self.name, 'Graph', target.name, 'Merged')
-        else:
-            raise NotImplementedError('Currently not available mode')

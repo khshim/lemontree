@@ -19,7 +19,7 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
                  out_activation = Tanh(),
                  gradient_steps=-1,
                  output_return_index=[-1],
-                 precompute=False, unroll=False, backward=False, name=None):
+                 precompute=False, unroll=False, backward=False):
         """
         This function initializes the class.
         Input is 3D tensor, output is 3D tensor.
@@ -51,8 +51,6 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
         backward: bool, default: False
             a bool value determine the direction of sequence.
             although using backward True, output will be original order.
-        name: string
-            a name of the class. 
 
         Returns
         -------
@@ -70,8 +68,11 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
         self.output_shape = output_shape
         self.out_activation = out_activation
 
-        # create shared variables
+    def set_shared(self):
         """
+        This function overrides the parents' one.
+        Set shared variables.
+
         Shared Variables
         ----------------
         W: 2D matrix
@@ -81,13 +82,13 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
         b: 1D vector
             shape is (output dim,).
         """
-        W = np.zeros((input_shape[0], output_shape[0])).astype(theano.config.floatX)  # input[t] to output[t]
+        W = np.zeros((self.input_shape[0], self.output_shape[0])).astype(theano.config.floatX)  # input[t] to output[t]
         self.W = theano.shared(W, self.name + '_weight_W')
         self.W.tags = ['weight', self.name]
-        U = np.zeros((output_shape[0], output_shape[0])).astype(theano.config.floatX)  # output[t-1] to output[t]
+        U = np.zeros((self.output_shape[0], self.output_shape[0])).astype(theano.config.floatX)  # output[t-1] to output[t]
         self.U = theano.shared(U, self.name + '_weight_U')
         self.U.tags = ['weight', self.name]
-        b = np.zeros(output_shape).astype(theano.config.floatX)
+        b = np.zeros((self.output_shape,)).astype(theano.config.floatX)
         self.b = theano.shared(b, self.name + '_bias')
         self.b.tags = ['bias', self.name]
 
@@ -182,10 +183,6 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
         """
         This function overrides the parents' one.
         Returns interal layer parameters.
-
-        Parameters
-        ----------
-        None.
 
         Returns
         -------

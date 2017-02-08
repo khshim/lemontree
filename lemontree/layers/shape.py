@@ -14,7 +14,7 @@ class Flatten3DLayer(BaseLayer):
     This class implements flatten layer for 3D representation.
     Mostly used for dense layer after convolution layer.
     """
-    def __init__(self, input_shape, output_shape, name=None):
+    def __init__(self, input_shape, output_shape):
         """
         This function initializes the class.
         Input is 4D tensor, output is 2D tensor.
@@ -25,14 +25,8 @@ class Flatten3DLayer(BaseLayer):
             a tuple of three values, i.e., (input channel, input width, input height).
         output_shape: tuple
             a tuple of single value, i.e., (input channel,) or (input dim,).
-        name: string
-            a string name of this layer.
-
-        Returns
-        -------
-        None.
         """
-        super(Flatten3DLayer, self).__init__(name)
+        super(Flatten3DLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'

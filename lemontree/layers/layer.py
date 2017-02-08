@@ -17,6 +17,7 @@ class BaseLayer(object):
         """
         # set members
         self.name = None
+        self.batch_size = -1
 
     def set_name(self, name=None):
         """
@@ -29,6 +30,18 @@ class BaseLayer(object):
             a (new) name for this layer.
         """
         self.name = name
+
+    def set_batch_size(self, batch_size=-1):
+        """
+        This function set batch size of the layer.
+        Some layer require batch size!
+
+        Parameters
+        ----------
+        batch_size: integer, default: -1
+            an integer used for the graph.
+        """
+        self.batch_size = batch_size
 
     def set_shared(self):
         """

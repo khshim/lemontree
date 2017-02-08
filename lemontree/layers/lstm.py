@@ -23,7 +23,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
                  peephole=False,
                  gradient_steps=-1,
                  output_return_index=[-1],
-                 precompute=False, unroll=False, backward=False, name=None):
+                 precompute=False, unroll=False, backward=False):
         """
         This function initializes the class.
         Input is 3D tensor, output is 3D tensor.
@@ -66,15 +66,9 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         backward: bool, default: False
             a bool value determine the direction of sequence.
             although using backward True, output will be original order.
-        name: string
-            a name of the class. 
-
-        Returns
-        -------
-        None.
         """
         super(LSTMRecurrentLayer, self).__init__(gradient_steps, output_return_index,
-                                                 precompute, unroll, backward, name)
+                                                 precompute, unroll, backward)
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple with single value.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'
@@ -93,8 +87,11 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         self.forget_bias_one = forget_bias_one
         self.peephole = peephole
         
-        # create shared variables
+    def set_shared(self):
         """
+        This function overrides the parents' one.
+        Set shared variables.
+
         Shared Variables
         ----------------
         W: 2D matrix
@@ -110,23 +107,23 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         W and U are computed by a single dot product, while V is not.
         """
         # order: forget, input, output, cell_candidate
-        W_np = np.zeros((input_shape[0], output_shape[0] * 4)).astype(theano.config.floatX)  # input[t] to ~~
+        W_np = np.zeros((self.input_shape[0], self.output_shape[0] * 4)).astype(theano.config.floatX)  # input[t] to ~~
         self.W = theano.shared(W_np, self.name + '_weight_W')
         self.W.tags = ['weight', self.name]
         # order: forget, input, output, cell_candidate
-        U_np = np.zeros((output_shape[0], output_shape[0] * 4)).astype(theano.config.floatX)  # output[t-1] to ~~
+        U_np = np.zeros((self.output_shape[0], self.output_shape[0] * 4)).astype(theano.config.floatX)  # output[t-1] to ~~
         self.U = theano.shared(U_np, self.name + '_weight_U')
         self.U.tags = ['weight', self.name]
         # order: forget, input, output, cell_candidate
-        b_np = np.zeros((output_shape[0] * 4,)).astype(theano.config.floatX)
+        b_np = np.zeros((self.output_shape[0] * 4,)).astype(theano.config.floatX)
         if self.forget_bias_one:
-            b_np[:output_shape[0]] = 1.0  # forget gate bias intialize to 1
+            b_np[:self.output_shape[0]] = 1.0  # forget gate bias intialize to 1
         self.b = theano.shared(b_np, self.name + '_bias')
         self.b.tags = ['bias', self.name]
 
         if self.peephole:
             # order: forget, input, output
-            V_np = np.zeros((output_shape[0], output_shape[0] * 3)).astype(theano.config.floatX)  # cell[t-1] to ~~
+            V_np = np.zeros((self.output_shape[0], self.output_shape[0] * 3)).astype(theano.config.floatX)  # cell[t-1] to ~~
             self.V = theano.shared(V_np, self.name + '_weight_V')
             self.V.tags = ['weight', self.name]
 
@@ -259,10 +256,6 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         """
         This function overrides the parents' one.
         Returns interal layer parameters.
-
-        Parameters
-        ----------
-        None.
 
         Returns
         -------

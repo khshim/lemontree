@@ -57,13 +57,13 @@ class DenseLayer(BaseLayer):
             shape is (output dim,).
         """
         W = np.zeros((self.input_shape[0], self.output_shape[0])).astype(theano.config.floatX)  # weight matrix
-        if target_cpu:
+        if self.target_cpu:
             self.W = theano.shared(W, self.name + '_weight', target='cpu')
         else:
             self.W = theano.shared(W, self.name + '_weight')
         self.W.tags = ['weight', self.name]
         b = np.zeros(self.output_shape,).astype(theano.config.floatX)  # bias vector, initialize with 0.
-        if target_cpu:
+        if self.target_cpu:
             self.b = theano.shared(b, self.name + '_bias', target='cpu')
         else:
             self.b = theano.shared(b, self.name + '_bias')
