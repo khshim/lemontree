@@ -14,7 +14,7 @@ class DropoutLayer(BaseLayer):
     """
     This class implements dropout for layer output energy (activations).
     """
-    def __init__(self, drop_probability=0.5, rescale=True, name=None):
+    def __init__(self, drop_probability=0.5, rescale=False, seed=4455):
         """
         This function initializes the class.
         Input and output tensor shape is equal.
@@ -26,26 +26,31 @@ class DropoutLayer(BaseLayer):
         rescale: bool, default: True
             a bool value whether we rescale the output or not.
             multiply ratio and preserve the variance.
-        name: string
-            a string name of this layer.
+        seed: int
+            an integer for random seed.
         """
-        super(DropoutLayer, self).__init__(name)
+        super(DropoutLayer, self).__init__()
         # check asserts
         assert drop_probability >= 0 and drop_probability < 1, '"drop_probability" should be in range [0, 1).'
         assert isinstance(rescale, bool), '"rescale" should be a bool value whether we use dropout rescaling or not.'
 
-        # set members
+        # set members        
+        self.drop_probability = drop_probability
+        self.rescale = rescale
+        self.rng = MRG(seed)  # random number generator
+
+    def set_shared(self):
         """
+        This function overrides the parents' one.
+        Set shared Variables.
+
         Shared Variables
         ----------------
         flag: scalar
             a scalar value to distinguish training mode and inference mode.
-        """
-        self.flag = theano.shared(1, 'flag')  # 1: train / -1: inference
+        """        
+        self.flag = theano.shared(1, self.name + '_flag')  # 1: train / -1: inference
         self.flag.tags = ['flag', self.name]
-        self.drop_probability = drop_probability
-        self.rescale = rescale
-        self.rng = MRG(np.random.randint(1, 2147462559))  # random number generator
 
     def change_flag(self, new_flag):
         """

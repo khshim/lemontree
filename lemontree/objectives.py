@@ -6,32 +6,10 @@ Every computations are tensor operations.
 import numpy as np
 import theano
 import theano.tensor as T
+from lemontree.layers.layer import BaseLayer
 
 
-class BaseObjective(object):
-    """
-    This class defines abstract base class for objectives.
-    """
-    def get_loss(self, predict, label):
-        """
-        This function computes the loss by model prediction and real label.
-
-        Parameters
-        ----------
-        predict: TensorVariable
-            an array of (batch size, prediction).
-        label: TensorVariable
-            an array of (batch size, answer).
-
-        Returns
-        -------
-        TensorVariable
-            a symbolic tensor variable which is scalar.
-        """
-        raise NotImplementedError('Abstract class method')
-
-
-class CategoricalCrossentropy(BaseObjective):
+class CategoricalCrossentropy(BaseLayer):
 
     def __init__(self, stabilize=False, mode='mean'):
         """
@@ -41,8 +19,8 @@ class CategoricalCrossentropy(BaseObjective):
         ----------
         stabilize: bool, default: False
             a bool value to use stabilization or not.
-            if yes, predictions are clipped to small, nonnegative values to prevent NaNs.
-            the prediction slightly ignores the probability distribution assumtion of sum = 1.
+            if yes, input_ions are clipped to small, nonnegative values to prevent NaNs.
+            the input_ion slightly ignores the probability distribution assumtion of sum = 1.
             for most cases, it is OK to use 'False'.
             however, if you are using many-class such as imagenet, this option may matter.
         mode: string {'mean', 'sum'}, default: 'mean'
@@ -59,21 +37,20 @@ class CategoricalCrossentropy(BaseObjective):
         assert mode in ['mean', 'sum'], '"mode" should be either "mean" or "sum".'
 
         # set members
-        self.tags = ['loss', 'categorical_crossentropy']
         self.stabilize = stabilize
         self.mode = mode
 
-    def get_loss(self, predict, label, mask=None):
+    def get_output(self, input_, label, mask=None):
         """
         This function overrides the parents' one.
-        Computes the loss by model prediction and real label.
+        Computes the loss by model input_ion and real label.
         use theano implemented categorical_crossentropy directly.
 
         Parameters
         ----------
-        predict: TensorVariable
-            an array of (batch size, prediction).
-            for cross entropy task, "predict" is 2D matrix.
+        input_: TensorVariable
+            an array of (batch size, input_ion).
+            for cross entropy task, "input_" is 2D matrix.
         label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
@@ -90,32 +67,32 @@ class CategoricalCrossentropy(BaseObjective):
         if mask is None:
             if self.mode == 'mean':
                 if self.stabilize:
-                    return T.mean(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                    return T.mean(T.nnet.categorical_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label))
                 else:
-                    return T.mean(T.nnet.categorical_crossentropy(predict, label))
+                    return T.mean(T.nnet.categorical_crossentropy(input_, label))
             elif self.mode == 'sum':
                 if self.stabilize:
-                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                    return T.sum(T.nnet.categorical_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label))
                 else:
-                    return T.sum(T.nnet.categorical_crossentropy(predict, label))
+                    return T.sum(T.nnet.categorical_crossentropy(input_, label))
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
         else:
             if self.mode == 'mean':
                 if self.stabilize:
-                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
+                    return T.sum(T.nnet.categorical_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
                 else:
-                    return T.sum(T.nnet.categorical_crossentropy(predict, label) * mask) / T.sum(mask)
+                    return T.sum(T.nnet.categorical_crossentropy(input_, label) * mask) / T.sum(mask)
             elif self.mode == 'sum':
                 if self.stabilize:
-                    return T.sum(T.nnet.categorical_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask)
+                    return T.sum(T.nnet.categorical_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label) * mask)
                 else:
-                    return T.sum(T.nnet.categorical_crossentropy(predict, label) * mask)
+                    return T.sum(T.nnet.categorical_crossentropy(input_, label) * mask)
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
 
-class CategoricalAccuracy(BaseObjective):
+class CategoricalAccuracy(BaseLayer):
 
     def __init__(self, top_k=1):
         """
@@ -135,19 +112,18 @@ class CategoricalAccuracy(BaseObjective):
         assert isinstance(top_k, int) and top_k > 0, '"top_k" should be a positive integer.'
 
         # set members
-        self.tags = ['accuracy', 'categorical_accuracy']
         self.top_k = top_k
 
-    def get_loss(self, predict, label, mask=None):
+    def get_output(self, input_, label, mask=None):
         """
         This function overrides the parents' one.
-        Computes the loss by model prediction and real label.
+        Computes the loss by model input_ion and real label.
 
         Parameters
         ----------
-        predict: TensorVariable
-            an array of (batch size, prediction).
-            for accuracy task, "predict" is 2D matrix.
+        input_: TensorVariable
+            an array of (batch size, input_ion).
+            for accuracy task, "input_" is 2D matrix.
         label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
@@ -165,38 +141,38 @@ class CategoricalAccuracy(BaseObjective):
         if mask is None:
             if self.top_k == 1:
                 if label.ndim == 1:
-                    return T.mean(T.eq(T.argmax(predict, axis=-1), label))
+                    return T.mean(T.eq(T.argmax(input_, axis=-1), label))
                 elif label.ndim == 2:
-                    return T.mean(T.eq(T.argmax(predict, axis=-1), T.argmax(label, axis=-1)))
+                    return T.mean(T.eq(T.argmax(input_, axis=-1), T.argmax(label, axis=-1)))
                 else:
                     raise ValueError()
             else:
                 # TODO: not yet tested
-                top_k_predict = T.argsort(predict)[:, -self.top_k:]  # sort by values and keep top k indices
+                top_k_input_ = T.argsort(input_)[:, -self.top_k:]  # sort by values and keep top k indices
                 if label.ndim == 1:
-                    return T.mean(T.any(T.eq(top_k_predict, label), axis=-1))
+                    return T.mean(T.any(T.eq(top_k_input_, label), axis=-1))
                 elif label.ndim == 2:
-                    return T.mean(T.any(T.eq(top_k_predict, T.argmax(label,axis=-1)), axis=-1))
+                    return T.mean(T.any(T.eq(top_k_input_, T.argmax(label,axis=-1)), axis=-1))
                 raise ValueError()
         else:
             if self.top_k == 1:
                 if label.ndim == 1:
-                    return T.sum(T.eq(T.argmax(predict, axis=-1), label) * mask) / T.sum(mask)
+                    return T.sum(T.eq(T.argmax(input_, axis=-1), label) * mask) / T.sum(mask)
                 elif label.ndim == 2:
-                    return T.sum(T.eq(T.argmax(predict, axis=-1), T.argmax(label, axis=-1)) * mask) / T.sum(mask)
+                    return T.sum(T.eq(T.argmax(input_, axis=-1), T.argmax(label, axis=-1)) * mask) / T.sum(mask)
                 else:
                     raise ValueError()
             else:
                 # TODO: not yet tested
-                top_k_predict = T.argsort(predict)[:, -self.top_k:]  # sort by values and keep top k indices
+                top_k_input_ = T.argsort(input_)[:, -self.top_k:]  # sort by values and keep top k indices
                 if label.ndim == 1:
-                    return T.sum(T.any(T.eq(top_k_predict, label), axis=-1) * mask) / T.sum(mask)
+                    return T.sum(T.any(T.eq(top_k_input_, label), axis=-1) * mask) / T.sum(mask)
                 elif label.ndim == 2:
-                    return T.sum(T.any(T.eq(top_k_predict, T.argmax(label,axis=-1)), axis=-1) * mask) / T.sum(mask)
+                    return T.sum(T.any(T.eq(top_k_input_, T.argmax(label,axis=-1)), axis=-1) * mask) / T.sum(mask)
                 raise ValueError()
 
 
-class BinaryCrossentropy(BaseObjective):
+class BinaryCrossentropy(BaseLayer):
 
     def __init__(self, stabilize=False, mode='mean'):
         """
@@ -206,8 +182,8 @@ class BinaryCrossentropy(BaseObjective):
         ----------
         stabilize: bool, default: False
             a bool value to use stabilization or not.
-            if yes, predictions are clipped to small, nonnegative values to prevent NaNs.
-            the prediction slightly ignores the probability distribution assumtion of sum = 1.
+            if yes, input_ions are clipped to small, nonnegative values to prevent NaNs.
+            the input_ion slightly ignores the probability distribution assumtion of sum = 1.
             for most cases, it is OK to use 'False'.
             however, if you are using many-class such as imagenet, this option may matter.
         mode: string {'mean', 'sum'}, default: 'mean'
@@ -224,21 +200,20 @@ class BinaryCrossentropy(BaseObjective):
         assert mode in ['mean', 'sum'], '"mode" should be either "mean" or "sum".'
 
         # set members
-        self.tags = ['loss', 'binary_crossentropy']
         self.stabilize = stabilize
         self.mode = mode
 
-    def get_loss(self, predict, label, mask=None):
+    def get_output(self, input_, label, mask=None):
         """
         This function overrides the parents' one.
-        Computes the loss by model prediction and real label.
+        Computes the loss by model input_ion and real label.
         use theano implemented binary_crossentropy directly.
 
         Parameters
         ----------
-        predict: TensorVariable
-            an array of (batch size, prediction).
-            for cross entropy task, "predict" is 2D matrix.
+        input_: TensorVariable
+            an array of (batch size, input_ion).
+            for cross entropy task, "input_" is 2D matrix.
         label: TensorVariable
             an array of or (batchsize,) whose value is 0 or 1.
         mask: TensorVariable
@@ -254,58 +229,43 @@ class BinaryCrossentropy(BaseObjective):
         if mask is None:
             if self.mode == 'mean':
                 if self.stabilize:
-                    return T.mean(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                    return T.mean(T.nnet.binary_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label))
                 else:
-                    return T.mean(T.nnet.binary_crossentropy(predict, label))
+                    return T.mean(T.nnet.binary_crossentropy(input_, label))
             elif self.mode == 'sum':
                 if self.stabilize:
-                    return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label))
+                    return T.sum(T.nnet.binary_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label))
                 else:
-                    return T.sum(T.nnet.binary_crossentropy(predict, label))
+                    return T.sum(T.nnet.binary_crossentropy(input_, label))
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
         else:
             if self.mode == 'mean':
                 if self.stabilize:
-                    return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
+                    return T.sum(T.nnet.binary_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label) * mask) / T.sum(mask)
                 else:
-                    return T.sum(T.nnet.binary_crossentropy(predict, label) * mask) / T.sum(mask)
+                    return T.sum(T.nnet.binary_crossentropy(input_, label) * mask) / T.sum(mask)
             elif self.mode == 'sum':
                 if self.stabilize:
-                    return T.sum(T.nnet.binary_crossentropy(T.clip(predict, 1e-7, 1.0 - 1e-7), label) * mask)
+                    return T.sum(T.nnet.binary_crossentropy(T.clip(input_, 1e-7, 1.0 - 1e-7), label) * mask)
                 else:
-                    return T.sum(T.nnet.binary_crossentropy(predict, label) * mask)
+                    return T.sum(T.nnet.binary_crossentropy(input_, label) * mask)
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
 
-class BinaryAccuracy(BaseObjective):
+class BinaryAccuracy(BaseLayer):
 
-    def __init__(self):
-        """
-        This function initializes the class.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
-        """
-        # set members
-        self.tags = ['accuracy', 'binary_accuracy']
-
-    def get_loss(self, predict, label):
+    def get_output(self, input_, label):
         """
         This function overrides the parents' one.
-        Computes the loss by model prediction and real label.
+        Computes the loss by model input_ion and real label.
 
         Parameters
         ----------
-        predict: TensorVariable
-            an array of (batch size, prediction).
-            for accuracy task, "predict" is 2D matrix.
+        input_: TensorVariable
+            an array of (batch size, input_ion).
+            for accuracy task, "input_" is 2D matrix.
         label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend second one.
@@ -318,10 +278,10 @@ class BinaryAccuracy(BaseObjective):
         """
         # do
         # TODO: Not tested
-        return T.mean(T.eq(T.gt(predict, 0.5), label)) 
+        return T.mean(T.eq(T.gt(input_, 0.5), label)) 
 
 
-class SquareLoss(BaseObjective):
+class SquareLoss(BaseLayer):
 
     def __init__(self, mode='mean'):
         """
@@ -342,19 +302,18 @@ class SquareLoss(BaseObjective):
         assert mode in ['mean', 'sum'], '"mode" should be either "mean" or "sum".'
 
         # set members
-        self.tags = ['loss', 'square_loss']
         self.mode = mode
 
-    def get_loss(self, predict, label, mask=None):
+    def get_output(self, input_, label, mask=None):
         """
         This function overrides the parents' one.
-        Computes the loss by model prediction and real label.
+        Computes the loss by model input_ion and real label.
 
         Parameters
         ----------
-        predict: TensorVariable
-            an array of (batch size, prediction).
-            for accuracy task, "predict" is 2D matrix.
+        input_: TensorVariable
+            an array of (batch size, input_ion).
+            for accuracy task, "input_" is 2D matrix.
         label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for classification, highly recommend first one.
@@ -371,46 +330,32 @@ class SquareLoss(BaseObjective):
         # do
         if mask is None:
             if self.mode == 'mean':
-                return T.mean(T.square(predict - label))
+                return T.mean(T.square(input_ - label))
             elif self.mode == 'sum':
-                return T.sum(T.square(predict - label))
+                return T.sum(T.square(input_ - label))
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
         else:
             if self.mode == 'mean':
-                return T.sum(T.sum(T.square(predict - label), axis=-1) * mask) / T.sum(mask)
+                return T.sum(T.sum(T.square(input_ - label), axis=-1) * mask) / T.sum(mask)
             elif self.mode == 'sum':
-                return T.sum(T.sum(T.square(predict - label), axis=-1) * mask)
+                return T.sum(T.sum(T.square(input_ - label), axis=-1) * mask)
             else:
                 raise ValueError('Not implemented mode entered. Mode should be in {mean, sum}.')
 
 
-class WordPerplexity(BaseObjective):
+class WordPerplexity(BaseLayer):
 
-    def __init__(self):
-        """
-        This function initializes the class.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
-        """
-        self.tags = ['loss', 'word_perplexity']
-
-    def get_loss(self, predict, label, mask):
+    def get_output(self, input_, label, mask):
         """
         This function overrides the parents' one.
-        Computes the loss by mode prediction and real label.
+        Computes the loss by mode input_ion and real label.
         
         Parameters
         ----------
-        predict: TensorVariable
-            an array of (batch size, prediction).
-            for accuracy task, "predict" is 2D matrix.
+        input_: TensorVariable
+            an array of (batch size, input_ion).
+            for accuracy task, "input_" is 2D matrix.
         label: TensorVariable
             an array of (batch size, answer) or (batchsize,) if label is a list of class labels.
             for word perplexity case, currently only second one is supported.
@@ -426,29 +371,16 @@ class WordPerplexity(BaseObjective):
         """
         # do
         if mask is None:
-            return T.pow(2, -T.mean(T.log2(predict[T.arange(label.shape[0]), label])))
+            return T.pow(2, -T.mean(T.log2(input_[T.arange(label.shape[0]), label])))
         else:
-            return T.pow(2, -T.sum(T.log2(predict[T.arange(label.shape[0]), label]) * mask) / T.sum(mask))
+            return T.pow(2, -T.sum(T.log2(input_[T.arange(label.shape[0]), label]) * mask) / T.sum(mask))
 
 
-class L1norm(BaseObjective):
+# TODO: Fix L1, L2 to work!
+'''
+class L1norm(BaseLayer):
 
-    def __init__(self):
-        """
-        This function initializes the class.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
-        """
-        # set members
-        self.tags = ['loss', 'l1_norm']
-
-    def get_loss(self, params):
+    def get_output(self, params):
         """
         This function overrides the parents' one.
         Computes the loss by summing absolute parameter values.
@@ -472,24 +404,9 @@ class L1norm(BaseObjective):
         return loss_sum
 
 
-class L2norm(BaseObjective):
+class L2norm(BaseLayer):
 
-    def __init__(self):
-        """
-        This function initializes the class.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
-        """
-        # set members
-        self.tags = ['loss', 'l2_norm']
-
-    def get_loss(self, params):
+    def get_output(self, params):
         """
         This function overrides the parents' one.
         Computes the loss by summing squared parameter values.
@@ -511,3 +428,5 @@ class L2norm(BaseObjective):
         for pp in params:
             loss_sum += T.sum(T.square(pp))
         return loss_sum
+
+'''

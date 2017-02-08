@@ -14,7 +14,7 @@ class ReLU(BaseLayer):
     """
     This class implements ReLU activation function.
     """
-    def __init__(self, alpha=0, name=None):
+    def __init__(self, alpha=0):
         """
         This function initializes the class.
 
@@ -23,14 +23,8 @@ class ReLU(BaseLayer):
         alpha: float, default: 0
             a positive float value which indicates the tangent of x < 0 range.
             if alpha is not 0, this function become a leaky ReLU.
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
-        super(ReLU, self).__init__(name)
+        super(ReLU, self).__init__()
         # check asserts
         assert alpha >= 0, '"alpha" should be a non-negative float value.'
 
@@ -64,20 +58,11 @@ class Linear(BaseLayer):
     This class implements Linear activation function.
     Not non-linear, just return itself.
     """
-    def __init__(self, name=None):
+    def __init__(self):
         """
         This function initializes the class.
-
-        Parameters
-        ----------
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
-        super(Linear, self).__init__(name)
+        super(Linear, self).__init__()
 
     def get_output(self, input_):
         """
@@ -105,18 +90,9 @@ class Tanh(BaseLayer):
     """
     This class implements tanh activation function.
     """
-    def __init__(self, name = None):
+    def __init__(self):
         """
         This function initializes the class.
-
-        Parameters
-        ----------
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
         super(Tanh, self).__init__(name)
 
@@ -145,7 +121,7 @@ class ELU(BaseLayer):
     """
     This class implements ELU activation function.
     """
-    def __init__(self, alpha=1, name=None):
+    def __init__(self, alpha=1):
         """
         This function initializes the class.
 
@@ -154,15 +130,9 @@ class ELU(BaseLayer):
         alpha: float, default: 1
             a positive float value which indicates the tangent of x < 0 range.
             if alpha is not 0, this function become a leaky ReLU.
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
         # check asserts
-        super(ELU, self).__init__(name)
+        super(ELU, self).__init__()
         assert alpha >= 0, '"alpha" should be a non-negative float value.'
         self.alpha = alpha        
 
@@ -192,20 +162,11 @@ class Sigmoid(BaseLayer):
     """
     This class implements Sigmoid activation function.
     """
-    def __init__(self, name=None):
+    def __init__(self):
         """
         This function initializes the class.
-
-        Parameters
-        ----------
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
-        super(Sigmoid, self).__init__(name)
+        super(Sigmoid, self).__init__()
 
     def get_output(self, input_):
         """
@@ -231,20 +192,11 @@ class HardSigmoid(BaseLayer):
     """
     This class implements Hard sigmoid activation function.
     """
-    def __init__(self, name=None):
+    def __init__(self):
         """
         This function initializes the class.
-
-        Parameters
-        ----------
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
-        super(HardSigmoid, self).__init__(name)
+        super(HardSigmoid, self).__init__()
 
     def get_output(self, input_):
         """
@@ -270,20 +222,11 @@ class Softmax(BaseLayer):
     """
     This class implements softmax activation function.
     """
-    def __init__(self, name=None):
+    def __init__(self):
         """
         This function initializes the class.
-
-        Parameters
-        ----------
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
-        super(Softmax, self).__init__(name)
+        super(Softmax, self).__init__()
 
     def get_output(self, input_):
         """
@@ -311,7 +254,7 @@ class DistilationSoftmax(BaseLayer):
     Softmax distillation is widely used for sharpen / soften distribution.
     Also used for knowledge transfer.
     """
-    def __init__(self, temperature_init=1.0, name=None):
+    def __init__(self, temperature_init=1.0):
         """
         This function initializes the class.
 
@@ -321,21 +264,25 @@ class DistilationSoftmax(BaseLayer):
             a positive float value.
             if T > 1, become more soften, and T < 1, become more sharpen.
             if temperature is 1, same as normal softmax.
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
         super(DistilationSoftmax, self).__init__(name)
         # check asserts
         assert temperature_init > 0, '"temperature_init" should be a positive float.'
-        
+        self.temperature_init = temperature_init
+
+    def set_shared(self):
+        """
+        This function overrides the parents' one.
+        Set shared variables.
+
+        Shared Variables
+        ----------------
+        temperature: scalar
+        """
         # set members
-        temperature = np.array(temperature_init).astype('float32')
-        self.temperature = theano.shared(temperature, 'temperature')
-        self.temperature.tags = ['temperature']
+        temperature = np.array(self.temperature_init).astype('float32')
+        self.temperature = theano.shared(temperature, self.name + '_temperature')
+        self.temperature.tags = ['temperature', self.name]
 
     def change_temperature(self, new_temperature):
         """
@@ -345,14 +292,9 @@ class DistilationSoftmax(BaseLayer):
         ----------
         new_temperature: float
             a positive float value which will be a new temperature.
-
-        Returns
-        -------
-        None.
         """
         # check asserts
         assert new_temperature > 0, '"new_temperature" should be a positive float.'
-
         self.temperature.set_value(float(new_temperature))
 
     def get_output(self, input_):
@@ -381,7 +323,7 @@ class GumbelSoftmax(BaseLayer):
     See "Categorical Reparameterization with Gumbel-softmax".
     (Eric Jang, Shixiang Gu, Ben Poole, 2016.)
     """
-    def __init__(self, shape, temperature_init=0.1, seed=9683, name=None):
+    def __init__(self, shape, temperature_init=0.1, seed=9683):
         """
         This function initializes the class.
 
@@ -394,24 +336,29 @@ class GumbelSoftmax(BaseLayer):
             a positive float value.
             if T > 1, become more soften, and T < 1, become more sharpen.
             if temperature is 1, same as normal softmax.
-        name: string
-            a string name of this class.
-
-        Returns
-        -------
-        None.
         """
-        super(GumbelSoftmax, self).__init__(name)
+        super(GumbelSoftmax, self).__init__()
         # check asserts
         assert isinstance(shape, tuple), '"shape" should be a tuple of shape.'
         assert temperature_init > 0, '"temperature_init" should be a positive float.'
         
         # set members
         self.shape = shape
-        temperature = np.array(temperature_init).astype('float32')
-        self.temperature = theano.shared(temperature, 'temperature')
-        self.temperature.tags = ['temperature']
+        self.temperature_init = temperature_init
         self.rng = MRG(seed)
+
+    def set_shared(self):
+        """
+        This function overrides the parents' one.
+        Set shared variables.
+
+        Shared Variables
+        ----------------
+        temperature: scalar
+        """
+        temperature = np.array(self.temperature_init).astype('float32')
+        self.temperature = theano.shared(temperature, self.name + '_temperature')
+        self.temperature.tags = ['temperature', self.name]        
 
     def change_temperature(self, new_temperature):
         """
@@ -421,14 +368,9 @@ class GumbelSoftmax(BaseLayer):
         ----------
         new_temperature: float
             a positive float value which will be a new temperature.
-
-        Returns
-        -------
-        None.
         """
         # check asserts
         assert new_temperature > 0, '"new_temperature" should be a positive float.'
-
         self.temperature.set_value(float(new_temperature))
 
     def get_output(self, input_):

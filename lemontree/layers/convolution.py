@@ -16,7 +16,7 @@ class Convolution3DLayer(BaseLayer):
     This class implements convolution for 3D representation.
     """
     def __init__(self, input_shape, output_shape, kernel_shape,
-                 border_mode='valid', stride=(1, 1), use_bias=True, name=None):
+                 border_mode='valid', stride=(1, 1), use_bias=True):
         """
         This function initializes the class.
         Input is 4D tensor, output is 4D tensor.
@@ -44,14 +44,8 @@ class Convolution3DLayer(BaseLayer):
             also known as subsample.
         use_bias: bool, default: True
             a bool value whether we use bias or not.
-        name: string
-            a string name of this layer.
-
-        Returns
-        -------
-        None.
         """
-        super(Convolution3DLayer, self).__init__(name)
+        super(Convolution3DLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 3, '"output_shape" should be a tuple with three values.'
@@ -69,8 +63,11 @@ class Convolution3DLayer(BaseLayer):
         self.stride = stride
         self.use_bias = use_bias
 
-        # create shared variables
+    def set_shared(self):
         """
+        This function overrides the parents' one.
+        Set shared variables.
+
         Shared Variables
         ----------------
         W: 4D matrix
@@ -114,10 +111,6 @@ class Convolution3DLayer(BaseLayer):
         This function overrides the parents' one.
         Returns interal layer parameters.
 
-        Parameters
-        ----------
-        None.
-
         Returns
         -------
         list
@@ -135,7 +128,7 @@ class Padding3DLayer(BaseLayer):
     If you use this class for padding before convolution, better use 'half' or 'int' or (int1, int2) for border_mode in Convolution3D.
     Convolution3D layer only supports symmetric padding (which is major), but this class also supports non symmetric padding.
     """
-    def __init__(self, input_shape, output_shape, padding=(1, 1, 1, 1), name=None):
+    def __init__(self, input_shape, output_shape, padding=(1, 1, 1, 1)):
         """
         This function initializes the class.
         Input is 4D tensor, output is 4D tensor.
@@ -149,10 +142,8 @@ class Padding3DLayer(BaseLayer):
             output width and height should be match to real convolution output.
         padding: tuple
             a tuple of four values, i.e., (padding up, padding down, padding left, padding right).
-        name: string
-            a string name of this layer.
         """
-        super(Padding3DLayer, self).__init__(name)
+        super(Padding3DLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 3, '"output_shape" should be a tuple with three values.'

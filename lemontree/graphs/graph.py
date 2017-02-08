@@ -30,33 +30,13 @@ class SimpleGraph(object):
         None.
         """
         # set members
-        self.name = name
-        self.params = []  # collection of layer parameters
+        self.index = 0
+        self.name = name        
         self.layers = []  # stack layer class itself
-        self.outputs = []  # stack outputs of each layer, the last one is the final output
+        self.params = []  # collection of layer parameters
         self.updates = OrderedDict()  # collection of layer internal updates
 
-    def add_input(self, input_):
-        """
-        This function starts the symbolic graph by input.
-        For most cases, input is defined outside, i.e., T.fmatrix('X').
-
-        Parameters
-        ----------
-        input: TensorVariable
-            a TensorVariable defined by programmer.
-
-        Returns
-        -------
-        None.
-        """
-        # check asserts
-        assert len(self.outputs) == 0  # should start with clean graph
-
-        # do
-        self.outputs.append(input_)
-
-    def get_output(self):
+    def get_outputs(self):
         """
         This function gets current output of stacked layers.
         A convenient function to get output.
@@ -71,7 +51,7 @@ class SimpleGraph(object):
         TensorVariable
             a TensorVariable which is not an input to other layers.
         """
-        return self.outputs[-1]
+        pass
 
     def get_params(self):
         """
@@ -86,7 +66,7 @@ class SimpleGraph(object):
         list
             a list of (shared variable) parameters from layers.
         """
-        return self.params
+        pass
 
     def get_updates(self):
         """
@@ -101,9 +81,9 @@ class SimpleGraph(object):
         OrderedDict
             a dictionary of updates, not from optimizers.
         """
-        return self.updates
+        pass
 
-    def add_layer(self, layer):
+    def add_layer(self, layer, get_from=[-1]):
         """
         This function adds layer to the sequential graph.
         Each layer should append layer itself, output, parameters, and updates.
@@ -118,14 +98,7 @@ class SimpleGraph(object):
         None.
         """
         # collect from input layer
-        layer_params = layer.get_params()
-        layer_updates = layer.get_updates()
-        layer_output = layer.get_output(self.get_output())
         self.layers.append(layer)
-        self.outputs.append(layer_output)
-        self.params = self.params + layer_params
-        self.updates = merge_dicts([self.updates, layer_updates])
-        print(self.name, 'Layer added', type(layer).__name__, layer.name)
 
     def add_layers(self, layers):
         """

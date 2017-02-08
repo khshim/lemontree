@@ -11,21 +11,41 @@ class BaseLayer(object):
     This class defines abstract base class for all layers.
     Every layer should have its own name, which is given from initialization.
     """
-    def __init__(self, name=None):
+    def __init__(self):
         """
         This function initializes the class.
+        """
+        # set members
+        self.name = None
+
+    def set_name(self, name=None):
+        """
+        This function set name of the layer.
+        Every layer should have name!
 
         Parameters
         ----------
         name: string
-            a string name for this layer.
+            a (new) name for this layer.
+        """
+        self.name = name
+
+    def set_shared(self):
+        """
+        This function creates shared variables used in this layer.
+
+        Parameters
+        ----------
+        input_: TensorVariable
+            a TensorVariable to compute the output.
+            name 'input' is pre-defined, so we use 'input_' instead.
 
         Returns
         -------
-        None.
+        TensorVariable
+            a TensorVariable computed by the layer.
         """
-        # set members
-        self.name = name
+        pass  # for default, no shared
 
     def get_output(self, input_):
         """
@@ -52,31 +72,13 @@ class BaseLayer(object):
         If you don't want optimizer to train this params, there are two ways.
         First, you can give optimizer "exclude_tags" option for not generating updates.
         Second, you can add parameters after computing optimizer updates.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
         """
         return []  # for default
-        # raise NotImplementedError('Abstarct class method')
 
     def get_updates(self):
         """
         This function returns internal updates.
         Updates are applied for each mini-batch training (or not).
         Layer updates can be merged with optimizer updates by "merge_dicts" function.
-
-        Parameters
-        ----------
-        None.
-
-        Returns
-        -------
-        None.
         """
         return OrderedDict()  # for default
-        # raise NotImplementedError('Abstract class method')

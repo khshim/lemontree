@@ -14,7 +14,7 @@ class DenseLayer(BaseLayer):
     """
     This class implements dense layer connection.
     """
-    def __init__(self, input_shape, output_shape, use_bias=True, target_cpu=False, name=None):
+    def __init__(self, input_shape, output_shape, use_bias=True, target_cpu=False):
         """
         This function initializes the class.
         Input is 2D tensor, output is 2D tensor.
@@ -30,14 +30,8 @@ class DenseLayer(BaseLayer):
             a bool value whether we use bias or not.
         target_cpu: bool, default: False
             a bool value whether shared variable will be on cpu or gpu.
-        name: string
-            a string name of this layer.
-
-        Returns
-        -------
-        None.
         """
-        super(DenseLayer, self).__init__(name)
+        super(DenseLayer, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple with single value.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'
@@ -50,8 +44,11 @@ class DenseLayer(BaseLayer):
         self.use_bias = use_bias
         self.target_cpu = target_cpu
 
-        # create shared variables
+    def set_shared(self):
         """
+        This function overrides the parents' one.
+        Set shared variables.
+
         Shared Variables
         ----------------
         W: 2D matrix
@@ -59,13 +56,13 @@ class DenseLayer(BaseLayer):
         b: 1D vector
             shape is (output dim,).
         """
-        W = np.zeros((input_shape[0], output_shape[0])).astype(theano.config.floatX)  # weight matrix
+        W = np.zeros((self.input_shape[0], self.output_shape[0])).astype(theano.config.floatX)  # weight matrix
         if target_cpu:
             self.W = theano.shared(W, self.name + '_weight', target='cpu')
         else:
             self.W = theano.shared(W, self.name + '_weight')
         self.W.tags = ['weight', self.name]
-        b = np.zeros(output_shape).astype(theano.config.floatX)  # bias vector, initialize with 0.
+        b = np.zeros(self.output_shape,).astype(theano.config.floatX)  # bias vector, initialize with 0.
         if target_cpu:
             self.b = theano.shared(b, self.name + '_bias', target='cpu')
         else:
@@ -100,10 +97,6 @@ class DenseLayer(BaseLayer):
         """
         This function overrides the parents' one.
         Returns interal layer parameters.
-
-        Parameters
-        ----------
-        None.
 
         Returns
         -------
