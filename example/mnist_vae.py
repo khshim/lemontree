@@ -22,7 +22,7 @@ from lemontree.layers.dense import DenseLayer
 from lemontree.layers.normalization import BatchNormalization1DLayer
 from lemontree.layers.variational import Latent1DLayer
 from lemontree.initializers import HeNormal
-from lemontree.layers.objective import BinaryCrossentropy, KLDivergence
+from lemontree.objectives import BinaryCrossentropy, KLGaussianNormal
 from lemontree.optimizers import Adam
 from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
@@ -31,8 +31,8 @@ from lemontree.utils.graph_utils import get_inputs_of_variables
 from lemontree.utils.data_utils import split_data
 
 np.random.seed(9999)
-# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-base_datapath = 'D:/Dropbox/Project/data/'
+base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+# base_datapath = 'D:/Dropbox/Project/data/'
 # base_datapath = '/home/khshim/data/'
 experiment_name = 'mnist_vae'
 
@@ -54,29 +54,28 @@ x = T.fmatrix('X')
 z = T.fmatrix('Z')
 
 graph = SimpleGraph(experiment_name, 250)
-graph.add_layer(DenseLayer((784,), (1024,), use_bias=False), get_from=[])
-graph.add_layer(BatchNormalization1DLayer((1024,)))
-graph.add_layer(ReLU(0.1))
-graph.add_layer(DenseLayer((1024,), (1024,), use_bias=False))
-graph.add_layer(BatchNormalization1DLayer((1024,)))
-graph.add_layer(ReLU(0.1))
-graph.add_layer(DenseLayer((1024,), (256,)))
-graph.add_layer(Latent1DLayer((256,), (128,)))
+graph.add_layer(DenseLayer((784,), (1024,), use_bias=False), get_from=[])       # 0
+graph.add_layer(BatchNormalization1DLayer((1024,)))                             # 1
+graph.add_layer(ReLU(0.1))                                                      # 2
+graph.add_layer(DenseLayer((1024,), (1024,), use_bias=False))                   # 3
+graph.add_layer(BatchNormalization1DLayer((1024,)))                             # 4
+graph.add_layer(ReLU(0.1))                                                      # 5
+graph.add_layer(DenseLayer((1024,), (256,)))                                    # 6
+graph.add_layer(Latent1DLayer((256,), (128,)))                                  # 7
 
-graph.add_layer(DenseLayer((128,), (1024,), use_bias=False))
-graph.add_layer(BatchNormalization1DLayer((1024,)))
-graph.add_layer(ReLU(0.1))
-graph.add_layer(DenseLayer((1024,), (1024,), use_bias=False))
-graph.add_layer(BatchNormalization1DLayer((1024,)))
-graph.add_layer(ReLU(0.1))
-graph.add_layer(DenseLayer((1024,), (784,)))
-graph.add_layer(Sigmoid())
+graph.add_layer(DenseLayer((128,), (1024,), use_bias=False))                    # 8
+graph.add_layer(BatchNormalization1DLayer((1024,)))                             # 9
+graph.add_layer(ReLU(0.1))                                                      # 10
+graph.add_layer(DenseLayer((1024,), (1024,), use_bias=False))                   # 11
+graph.add_layer(BatchNormalization1DLayer((1024,)))                             # 12
+graph.add_layer(ReLU(0.1))                                                      # 13
+graph.add_layer(DenseLayer((1024,), (784,)))                                    # 14
+graph.add_layer(Sigmoid())                                                      # 15
 
-graph.add_layer(BinaryCrossentropy(True))
-graph.add_layer(KLDivergence((256,), (128,)), get_from=[-11])
-
-latent_loss, _ = graph.get_output({0:[x]}, -1, 0)
-reconstruct_loss, _ = graph.get_output({0:[x], -2:[x]}, -2, 0)
+graph_output, graph_layers = graph.get_output({0:[x]}, -1, 0)
+latent_output, latent_layers = graph.get_output({0:[x]}, 6, 0)
+reconstruct_loss = BinaryCrossentropy().get_output(graph_output, x)
+latent_loss = KLGaussianNormal((256,), (128,)).get_output(latent_output)
 loss = latent_loss + reconstruct_loss
 
 graph_params = graph.get_params()
@@ -84,7 +83,7 @@ graph_updates = graph.get_updates()
 
 # generator
 
-gen_output, _ = graph.get_output({-10:[z]}, -3, -10)
+gen_output, _ = graph.get_output({8:[z]}, -1, 8)
 
 #================Prepare arguments================#
 
@@ -169,7 +168,7 @@ def test_testset():
         testset = test_gen.get_minibatch(index)
         test_batch_loss = test_func(testset[0])
         test_loss.append(test_batch_loss[0])
-        testlatent_loss.append(test_batch_loss[1])
+        test_latent_loss.append(test_batch_loss[1])
         test_reconstruct_loss.append(test_batch_loss[2])
     hist.history['test_loss'].append(np.mean(np.asarray(test_loss)))
     hist.history['test_latent_loss'].append(np.mean(np.asarray(test_latent_loss)))
@@ -180,7 +179,7 @@ if not os.path.exists(result_folder):
     os.makedirs(result_folder)
 
 def generate(epoch):
-    random_z = np.random.normal(0, 1, (64, 128))
+    random_z = np.random.normal(0, 1, (250, 128))
     generated = gen_func(random_z)
     manifold = np.zeros((28*8, 28*8), dtype=theano.config.floatX)
     for indx in range(8):

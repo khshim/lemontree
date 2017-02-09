@@ -18,7 +18,7 @@ from lemontree.layers.activation import ReLU, Softmax
 from lemontree.layers.dense import DenseLayer
 from lemontree.layers.normalization import BatchNormalization1DLayer
 from lemontree.initializers import HeNormal
-from lemontree.layers.objective import CategoricalAccuracy, CategoricalCrossentropy
+from lemontree.objectives import CategoricalAccuracy, CategoricalCrossentropy
 from lemontree.optimizers import Adam
 from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
@@ -27,8 +27,8 @@ from lemontree.utils.graph_utils import get_inputs_of_variables
 from lemontree.utils.data_utils import int_to_onehot
 
 np.random.seed(9999)
-# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-base_datapath = 'D:/Dropbox/Project/data/'
+base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+# base_datapath = 'D:/Dropbox/Project/data/'
 # base_datapath = '/home/khshim/data/'
 experiment_name = 'mnist_mlp'
 
@@ -59,14 +59,14 @@ for i in range(2):
     graph.add_layer(ReLU())                                                     # 5 8
 graph.add_layer(DenseLayer((1024,),(10,)))                                  # 9
 graph.add_layer(Softmax())                                                  # 10
-graph.add_layer(CategoricalCrossentropy())                                  # 11
-graph.add_layer(CategoricalAccuracy(), get_from=[-2])                       # 12
 
-loss, loss_layers = graph.get_output({0:[x], -2:[y]}, -2, 0)
-accuracy, accuracy_layers = graph.get_output({0:[x], -1:[y]}, -1, 0)
+graph_output, graph_layers = graph.get_output({0:[x]}, -1, 0)
 
-graph_params = graph.get_params(loss_layers)
-graph_updates = graph.get_updates(loss_layers)
+loss = CategoricalCrossentropy().get_output(graph_output, y)
+accuracy = CategoricalAccuracy().get_output(graph_output, y)
+
+graph_params = graph.get_params(graph_layers)
+graph_updates = graph.get_updates(graph_layers)
 
 #================Prepare arguments================#
 

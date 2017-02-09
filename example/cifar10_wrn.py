@@ -24,7 +24,7 @@ from lemontree.layers.shape import Flatten3DLayer
 from lemontree.layers.merge import MergeAddLayer
 from lemontree.layers.dropout import DropoutLayer
 from lemontree.initializers import HeNormal
-from lemontree.layers.objective import CategoricalAccuracy, CategoricalCrossentropy
+from lemontree.objectives import CategoricalAccuracy, CategoricalCrossentropy
 from lemontree.optimizers import Adam, RMSprop
 from lemontree.parameters import SimpleParameter
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
@@ -33,8 +33,8 @@ from lemontree.utils.graph_utils import get_inputs_of_variables
 from lemontree.utils.data_utils import int_to_onehot
 
 np.random.seed(9999)
-# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-base_datapath = 'D:/Dropbox/Project/data/'
+base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+# base_datapath = 'D:/Dropbox/Project/data/'
 # base_datapath = '/home/khshim/data/'
 experiment_name = 'cifar10_wrn'
 
@@ -128,14 +128,13 @@ graph.add_layer(GlobalAveragePooling3DLayer((512,8,8), (512,)))                 
 graph.add_layer(DenseLayer((512,), (10,)))                                                      # 49
 graph.add_layer(Softmax())                                                                      # 50
 
-graph.add_layer(CategoricalCrossentropy())                                                      # 51
-graph.add_layer(CategoricalAccuracy(), get_from=[-2])                                           # 52
+graph_output, graph_layers = graph.get_output({0:[x]}, -1, 0)
 
-loss, loss_layer = graph.get_output({0:[x], -2:[y]}, -2, 0)
-accuracy, accuracy_layer = graph.get_output({0:[x], -1:[y]}, -1, 0)
+loss = CategoricalCrossentropy().get_output(graph_output, y)
+accuracy = CategoricalAccuracy().get_output(graph_output, y)
 
-graph_params = graph.get_params(loss_layer)
-graph_updates = graph.get_updates(loss_layer)
+graph_params = graph.get_params(graph_layers)
+graph_updates = graph.get_updates(graph_layers)
 
 #================Prepare arguments================#
 
@@ -173,7 +172,7 @@ test_func = theano.function(inputs=graph_inputs,
                             allow_input_downcast=True)
 
 test_func_output = theano.function(inputs=[x],
-                                   outputs=T.argmax(graph.get_output({0:[x]}, -3, 0)[0], axis=-1),
+                                   outputs=T.argmax(graph_output, axis=-1),
                                    allow_input_downcast=True)
 
 
