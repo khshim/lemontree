@@ -50,8 +50,8 @@ train_gen = SimpleGenerator([train_data], batch_size, 'train')
 
 x = T.ftensor4('X')  # (batch_size, 784)
 z = T.fmatrix('Z')  # (batch_size, 100)
-y_one = T.ivector('Y1')  # (batch_size,)
-y_zero = T.ivector('Y0')  # (batch_size,)
+y_one = T.fmatrix('Y1')  # (batch_size, 2)
+y_zero = T.fmatrix('Y0')  # (batch_size, 2)
 
 generator = SimpleGraph(experiment_name + '_gen', batch_size)
 generator.add_layer(DenseLayer((100,),(39200,), use_bias=False), is_start=True)                    # 0
