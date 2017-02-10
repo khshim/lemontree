@@ -94,7 +94,7 @@ class Tanh(BaseLayer):
         """
         This function initializes the class.
         """
-        super(Tanh, self).__init__(name)
+        super(Tanh, self).__init__()
 
     def get_output(self, input_):
         """
@@ -323,7 +323,7 @@ class GumbelSoftmax(BaseLayer):
     See "Categorical Reparameterization with Gumbel-softmax".
     (Eric Jang, Shixiang Gu, Ben Poole, 2016.)
     """
-    def __init__(self, shape, temperature_init=0.1, seed=9683):
+    def __init__(self, input_shape, temperature_init=0.1, seed=9683):
         """
         This function initializes the class.
 
@@ -339,11 +339,11 @@ class GumbelSoftmax(BaseLayer):
         """
         super(GumbelSoftmax, self).__init__()
         # check asserts
-        assert isinstance(shape, tuple), '"shape" should be a tuple of shape.'
+        assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple of shape.'
         assert temperature_init > 0, '"temperature_init" should be a positive float.'
         
         # set members
-        self.shape = shape
+        self.input_shape = input_shape
         self.temperature_init = temperature_init
         self.rng = MRG(seed)
 
@@ -392,6 +392,6 @@ class GumbelSoftmax(BaseLayer):
         TensorVariable
         """
         # generate random gumbel distribution
-        uniform_random = self.rng.uniform(self.shape, 0, 1)
+        uniform_random = self.rng.uniform((self.batch_size, self.input_shape[0]), 0, 1)
         gumbel_random = -T.log(-T.log(uniform_random + 1e-7) + 1e-7)
         return T.nnet.softmax((input_ + gumbel_random) / self.temperature)  # divide by temperature

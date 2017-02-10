@@ -6,10 +6,10 @@ Return trace of confusion matrix as loss.
 import numpy as np
 import theano
 import theano.tensor as T
-from lemontree.objectives import BaseObjective
+from lemontree.layers.layer import BaseLayer
 
 
-class ConfusionTrace(BaseObjective):
+class ConfusionTrace(BaseLayer):
     """
     This class implements confusion matrix trace.
     """
@@ -28,7 +28,7 @@ class ConfusionTrace(BaseObjective):
         """
         self.num_class = num_class
 
-    def get_loss(self, predict, label):
+    def get_output(self, predict, label):
         """
         This function overrides the parents' one.
         Computes the loss by model prediction and real label.

@@ -12,23 +12,27 @@ import theano.tensor as T
 from lemontree.data.mnist import MNIST
 from lemontree.data.glove import GloveData
 from lemontree.data.bookcorpus import BookCorpusWordCorpus
+from lemontree.graphs.graph import SimpleGraph
 from lemontree.generators.sequence import WordLMGenerator
 from lemontree.controls.history import HistoryWithEarlyStopping
 from lemontree.controls.scheduler import LearningRateMultiplyScheduler
+from lemontree.experimentals.dense_scp import TimeDistributedDenseLayerSCP
 from lemontree.layers.activation import ReLU, Softmax
-from lemontree.layers.dense import DenseLayer
+from lemontree.layers.dense import TimeDistributedDenseLayer, DenseLayer
 from lemontree.layers.lstm import LSTMRecurrentLayer
 from lemontree.initializers import GlorotNormal
 from lemontree.objectives import CategoricalCrossentropy, CategoricalAccuracy, WordPerplexity
 from lemontree.optimizers import RMSprop
 from lemontree.parameters import SimpleParameter
+from lemontree.utils.data_utils import sentence_bucketing, sentence_padding
 from lemontree.utils.param_utils import filter_params_by_tags, print_tags_in_params, print_params_num
 from lemontree.utils.graph_utils import get_inputs_of_variables
+from lemontree.utils.type_utils import merge_dicts
 
 np.random.seed(9999)
-# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
 # base_datapath = 'D:/Dropbox/Project/data/'
-base_datapath = '/home/khshim/data/'
+# base_datapath = '/home/khshim/data/'
 experiment_name = 'bookcorpus_wordlm'
 
 #================Prepare data================#
@@ -45,58 +49,59 @@ print('Valid data length:', len(valid_data))
 
 batch_size = 50
 sequence_length = 20
-overlap_length = 10
+stride_length = 10
+buckets = [20,40,60,80,100]
+
+train_data, train_mask = sentence_bucketing(train_data, buckets)
+test_data, test_mask = sentence_bucketing(test_data, buckets)
+valid_data, valid_mask = sentence_bucketing(valid_data, buckets)
 
 glove = GloveData(base_datapath, load_pickle=True)  # pickle dict and embeddings
-train_gen = WordLMGenerator([train_data], glove, sequence_length, overlap_length, batch_size, 'train', 337)
-test_gen = WordLMGenerator([test_data], glove, sequence_length, overlap_length, batch_size, 'test', 338)
-valid_gen = WordLMGenerator([valid_data], glove, sequence_length, overlap_length, batch_size, 'valid', 339)
+train_gens = []
+test_gens = []
+valid_gens = []
+for bb in range(len(buckets)):
+    if len(train_data[bb]) >= batch_size:
+        train_gens.append(WordLMGenerator([train_data[bb], train_mask[bb]], glove, \
+            sequence_length, stride_length, buckets[bb], batch_size))
+    if len(test_data[bb]) >= batch_size:
+        test_gens.append(WordLMGenerator([test_data[bb], test_mask[bb]], glove, \
+            sequence_length, stride_length, buckets[bb], batch_size))
+    if len(valid_data[bb]) >= batch_size:
+        valid_gens.append(WordLMGenerator([valid_data[bb], valid_mask[bb]], glove, \
+            sequence_length, stride_length, buckets[bb], batch_size))
 
 #================Build graph================#
 
 x = T.ftensor3('X')  # (batch_size, sequence_length, 300)
-m = T.imatrix('M')  # (batch_size, sequence_length)
-y = T.imatrix('y')  # (batch_size, sequence_length)
-ci = T.fmatrix('ci')  # (batch_size, 500)
-hi = T.fmatrix('hi')  # (batch_size, 500)
+m = T.wmatrix('M')  # (batch_size, sequence_length)
+y = T.imatrix('Y')  # (batch_size, sequence_length)
+r = T.wvector('r')  # (batch_size,)
 
-# SimpleGraph class is too simple, so we don't use any explicit structure here.
+graph = SimpleGraph(experiment_name, batch_size)
+graph.add_layer(LSTMRecurrentLayer(input_shape=(300,),
+                                   output_shape=(1024,),
+                                   forget_bias_one=True,
+                                   peephole=True,
+                                   output_return_index=None,
+                                   save_state_index=stride_length-1,
+                                   precompute=False,
+                                   unroll=False,
+                                   backward=False), is_start=True)
+# graph.add_layer(TimeDistributedDenseLayer((1024,), (512,)))  # not much time difference, and less memory
+graph.add_layer(DenseLayer((1024,), (512,)))
+graph.add_layer(TimeDistributedDenseLayerSCP((512,), (glove.vocabulary,)))
 
-# lstm
-lstm = LSTMRecurrentLayer(input_shape=(300,),
-                          output_shape=(500,),
-                          forget_bias_one=True,
-                          output_return_index=None,
-                          precompute=False,
-                          unroll=False,
-                          peephole=False,
-                          name='lstm1')
+graph_output, graph_layers = graph.get_output({0:[x,m,r], -1:[y,m]}, -1, 0)
+loss = graph_output[0]
+perplexity = graph_output[1]
 
-feature_cell, feature_hidden = lstm.get_output(x,m,ci,hi)  # (batch_size, sequence_length, 500)
-
-cell_output = feature_cell[:, overlap_length-1,:]  # (batch_size, 500)
-hidden_output = feature_hidden[:, overlap_length-1,:]  # (batch_size, 500)
-
-# dense
-dense = DenseLayer((500,), (glove.vocabulary,), target_cpu=False, name='dense1')
-inter = dense.get_output(feature_hidden)  # (batch_size, sequence_length, 400003)
-inter = T.reshape(inter, (inter.shape[0] * inter.shape[1], inter.shape[2]))  # (batch_size * sequence_length, 400003)
-output = Softmax(name='softmax').get_output(inter)  # (batch_size * sequence_length, 400003)
-
-# label and mask
-label = T.reshape(y, (y.shape[0] * y.shape[1],))  # (batch_size * sequence_length,)
-mask = T.reshape(m, (m.shape[0] * m.shape[1],))  # (batch_size * sequence_length,)
-
-loss = CategoricalCrossentropy(True).get_loss(output, label, mask)
-accuracy = CategoricalAccuracy().get_loss(output, label, mask)
-perplexity = WordPerplexity().get_loss(output, label, mask)
-
-graph_params = lstm.get_params() + dense.get_params()
+graph_params = graph.get_params()
+graph_updates = graph.get_updates()
 
 #================Prepare arguments================#
 
 GlorotNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
-print_tags_in_params(graph_params)
 print_params_num(graph_params)
 
 optimizer = RMSprop(0.0001, clipnorm=5.0)
@@ -104,29 +109,24 @@ optimizer_updates = optimizer.get_updates(loss, graph_params)
 optimizer_params = optimizer.get_params()
 
 total_params = optimizer_params + graph_params
-total_updates = optimizer_updates  # no graph updates exist
+total_updates = merge_dicts([optimizer_updates, graph_updates])
 
 params_saver = SimpleParameter(total_params, experiment_name + '_params/')
 params_saver.save_params()
 
 lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.2)
 hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
-hist.add_keys(['train_accuracy', 'valid_accuracy', 'test_accuracy'])
 hist.add_keys(['train_perplexity', 'valid_perplexity', 'test_perplexity'])
 
 #================Compile functions================#
 
-outputs = [loss, accuracy, perplexity]
-graph_inputs = get_inputs_of_variables(outputs)
+outputs = [loss, perplexity]
+graph_inputs = [x,m,y,r]
 
 train_func = theano.function(inputs=graph_inputs,
                              outputs=outputs,
                              updates=total_updates,
                              allow_input_downcast=True)
-
-lstm1_result_func = theano.function(inputs=[x,m,ci,hi],
-                                    outputs=[cell_output, hidden_output],
-                                    allow_input_downcast=True)
 
 test_func = theano.function(inputs=graph_inputs,
                             outputs=outputs,
@@ -134,97 +134,87 @@ test_func = theano.function(inputs=graph_inputs,
 
 #================Convenient functions================#
 
-cell_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
-hidden_init = np.zeros((batch_size,500)).astype(theano.config.floatX)
 
 def train_trainset():
     train_loss = []
-    train_accuracy = []
     train_perplexity = []
     start_time = time.clock()
-    batch_cell_init = cell_init
-    batch_hidden_init = hidden_init
-    for index in range(train_gen.max_index):
-        # run minibatch
-        trainset = train_gen.get_minibatch(index)  # data, mask, label, reset
-        train_batch_loss, train_batch_accuracy, train_batch_perplexity = train_func(trainset[0], trainset[1], batch_cell_init, batch_hidden_init, trainset[2])
-        train_loss.append(train_batch_loss)
-        train_accuracy.append(train_batch_accuracy)
-        train_perplexity.append(train_batch_perplexity)
-        if index % 100 == 0 and index != 0:
-            current_time = time.clock()
-            print('......... minibatch index', index, 'of total index', train_gen.max_index)
-            print('............ minibatch x 100 loss',  np.mean(np.asarray(train_loss[-100:])))  # only 100, 200... th loss
-            print('............ minibatch x 100 accuracy', np.mean(np.asarray(train_accuracy[-100:])))  # only 100, 200... th loss
-            print('............ minibatch x 100 perplexity', np.mean(np.asarray(train_perplexity[-100:])))  # only 100, 200... th loss
-            print('......... minibatch x 100 time', current_time - start_time)
-            start_time = current_time
+    for i in range(len(train_gens)):
+        train_gen = train_gens[i]
+        for index in range(train_gen.max_index):
+            # run minibatch
+            for trainset in train_gen.get_minibatch(index):  # data, mask, label, reset
+                data = train_gen.convert_to_vector(trainset[0])
+                mask = trainset[1]
+                label = trainset[2]
+                reset = trainset[3]
+                train_batch_loss, train_batch_perplexity = train_func(data, mask, label, reset)
+                train_loss.append(train_batch_loss)
+                train_perplexity.append(train_batch_perplexity)
+                print('..........................', train_batch_loss, train_batch_perplexity)
+            if index % 100 == 0 and index != 0:
+                current_time = time.clock()
+                print('......... minibatch index', index, 'of total index', train_gen.max_index, 'of generator', i)
+                print('............ minibatch x 100 loss',  np.mean(np.asarray(train_loss[-100:])))  # only 100, 200... th loss
+                print('............ minibatch x 100 perplexity', np.mean(np.asarray(train_perplexity[-100:])))  # only 100, 200... th loss
+                print('......... minibatch x 100 time', current_time - start_time)
+                start_time = current_time
         
-        # prepare next initial cell and hidden
-        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(trainset[0], trainset[1], batch_cell_init, batch_hidden_init)
-        batch_cell_init = batch_cell_lstm1 * trainset[3][:, np.newaxis]
-        batch_hidden_init = batch_hidden_lstm1 * trainset[3][:, np.newaxis]
-
     hist.history['train_loss'].append(np.mean(np.asarray(train_loss)))
-    hist.history['train_accuracy'].append(np.mean(np.asarray(train_accuracy)))
     hist.history['train_perplexity'].append(np.mean(np.asarray(train_perplexity)))
 
 def test_validset():
     valid_loss = []
-    valid_accuracy = []
     valid_perplexity = []
     start_time = time.clock()
-    batch_cell_init = cell_init
-    batch_hidden_init = hidden_init
-    for index in range(valid_gen.max_index):
-        # run minibatch
-        validset = valid_gen.get_minibatch(index)  # data, mask, label, reset
-        valid_batch_loss, valid_batch_accuracy, valid_batch_perplexity = test_func(validset[0], validset[1], batch_cell_init, batch_hidden_init, validset[2])
-        valid_loss.append(valid_batch_loss)
-        valid_accuracy.append(valid_batch_accuracy)
-        valid_perplexity.append(valid_batch_perplexity)
-        if index % 100 == 0 and index != 0:
-            current_time = time.clock()
-            print('......... minibatch index', index, 'of total index', valid_gen.max_index)
-            print('......... minibatch x 100 time', current_time - start_time)
-            start_time = current_time
-
-        # prepare next initial cell and hidden
-        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(validset[0], validset[1], batch_cell_init, batch_hidden_init)
-        batch_cell_init = batch_cell_lstm1 * validset[3][:, np.newaxis]
-        batch_hidden_init = batch_hidden_lstm1 * validset[3][:, np.newaxis]
-
+    for i in range(len(valid_gens)):
+        valid_gen = valid_gens[i]
+        for index in range(valid_gen.max_index):
+            # run minibatch
+            for validset in valid_gen.get_minibatch(index):  # data, mask, label, reset
+                data = valid_gen.convert_to_vector(validset[0])
+                mask = validset[1]
+                label = validset[2]
+                reset = validset[3]
+                valid_batch_loss, valid_batch_perplexity = valid_func(data, mask, label, reset)
+                valid_loss.append(valid_batch_loss)
+                valid_perplexity.append(valid_batch_perplexity)
+            if index % 100 == 0 and index != 0:
+                current_time = time.clock()
+                print('......... minibatch index', index, 'of total index', valid_gen.max_index, 'of generator', i)
+                print('............ minibatch x 100 loss',  np.mean(np.asarray(valid_loss[-100:])))  # only 100, 200... th loss
+                print('............ minibatch x 100 perplexity', np.mean(np.asarray(valid_perplexity[-100:])))  # only 100, 200... th loss
+                print('......... minibatch x 100 time', current_time - start_time)
+                start_time = current_time
+        
     hist.history['valid_loss'].append(np.mean(np.asarray(valid_loss)))
-    hist.history['valid_accuracy'].append(np.mean(np.asarray(valid_accuracy)))
     hist.history['valid_perplexity'].append(np.mean(np.asarray(valid_perplexity)))
 
 def test_testset():
     test_loss = []
-    test_accuracy = []
     test_perplexity = []
     start_time = time.clock()
-    batch_cell_init = cell_init
-    batch_hidden_init = hidden_init
-    for index in range(test_gen.max_index):
-        # run minibatch
-        testset = test_gen.get_minibatch(index)  # data, mask, label, reset
-        test_batch_loss, test_batch_accuracy, test_batch_perplexity = test_func(testset[0], testset[1], batch_cell_init, batch_hidden_init, testset[2])
-        test_loss.append(test_batch_loss)
-        test_accuracy.append(test_batch_accuracy)
-        test_perplexity.append(test_batch_perplexity)
-        if index % 100 == 0 and index != 0:
-            current_time = time.clock()
-            print('......... minibatch index', index, 'of total index', valid_gen.max_index)
-            print('......... minibatch x 100 time', current_time - start_time)
-            start_time = current_time
-
-        # prepare next initial cell and hidden
-        batch_cell_lstm1, batch_hidden_lstm1 = lstm1_result_func(testset[0], testset[1], batch_cell_init, batch_hidden_init)
-        batch_cell_init = batch_cell_lstm1 * testset[3][:, np.newaxis]
-        batch_hidden_init = batch_hidden_lstm1 * testset[3][:, np.newaxis]
-
+    for i in range(len(test_gens)):
+        test_gen = test_gens[i]
+        for index in range(test_gen.max_index):
+            # run minibatch
+            for testset in test_gen.get_minibatch(index):  # data, mask, label, reset
+                data = test_gen.convert_to_vector(testset[0])
+                mask = testset[1]
+                label = testset[2]
+                reset = testset[3]
+                test_batch_loss, test_batch_perplexity = test_func(data, mask, label, reset)
+                test_loss.append(test_batch_loss)
+                test_perplexity.append(test_batch_perplexity)
+            if index % 100 == 0 and index != 0:
+                current_time = time.clock()
+                print('......... minibatch index', index, 'of total index', test_gen.max_index, 'of generator', i)
+                print('............ minibatch x 100 loss',  np.mean(np.asarray(test_loss[-100:])))  # only 100, 200... th loss
+                print('............ minibatch x 100 perplexity', np.mean(np.asarray(test_perplexity[-100:])))  # only 100, 200... th loss
+                print('......... minibatch x 100 time', current_time - start_time)
+                start_time = current_time
+        
     hist.history['test_loss'].append(np.mean(np.asarray(test_loss)))
-    hist.history['test_accuracy'].append(np.mean(np.asarray(test_accuracy)))
     hist.history['test_perplexity'].append(np.mean(np.asarray(test_perplexity)))
 
 #================Train================#
@@ -239,7 +229,8 @@ for epoch in range(1000):
         params_saver.load_params()
         lr_scheduler.change_learningrate(epoch)
         # optimizer.reset_params()
-    train_gen.shuffle()
+    for i in range(len(train_gens)):
+        train_gens[i].shuffle()
 
     print('... Epoch', epoch)
     start_time = time.clock()
@@ -253,7 +244,8 @@ for epoch in range(1000):
     hist.print_history_of_epoch()
     checker = hist.check_earlystopping()
     if checker == 'save_param':
-        params_saver.save_params()
+        hist.save_history_to_csv()
+        params_saver.save_params()        
         change_lr = False
         end_train = False
     elif checker == 'change_lr':
@@ -272,7 +264,7 @@ for epoch in range(1000):
 
 test_testset()
 best_loss, best_epoch = hist.best_loss_and_epoch_of_key('valid_loss')
-hist.print_history_of_epoch(best_epoch, ['train_loss', 'train_accuracy', 'train_perplexity', 'valid_loss', 'valid_accuracy', 'valid_perplexity'])
+hist.print_history_of_epoch(best_epoch, ['train_loss', 'train_perplexity', 'valid_loss', 'valid_perplexity'])
 best_loss, best_epoch = hist.best_loss_and_epoch_of_key('test_loss')
-hist.print_history_of_epoch(best_epoch, ['test_loss', 'test_accuracy', 'test_perplexity'])
+hist.print_history_of_epoch(best_epoch, ['test_loss', 'test_perplexity'])
 hist.save_history_to_csv()

@@ -40,7 +40,7 @@ class SimpleGraph(object):
         self.params = []  # collection of layer parameters
         self.updates = OrderedDict()  # collection of layer internal updates
 
-    def add_layer(self, layer, get_from=[-1]):
+    def add_layer(self, layer, get_from=[-1], is_start=False):
         """
         This function adds layer to the sequential graph.
         Each layer should append layer itself, output, parameters, and updates.
@@ -51,19 +51,28 @@ class SimpleGraph(object):
             a Layer class that has a single input and a single output.
         get_from: list, default: [-1]
             a list of connections that layer gets output from.
+        is_start: bool, default: False
+            a bool value whether this layer has previous layer to get output from.
+            if True, ignore get_from and set to [].
         """
         # check asserts
         assert isinstance(get_from, list), '"get_from" should be a list of required layers.'
         if len(get_from) != 0:
             for gf in get_from:
                 assert gf < self.index, '"all layer in "get_from" should be previously added layers.'
+        assert isinstance(is_start, bool), '"is_start" should be a bool value.'
 
         # collect from input layer
         self.layers.append(layer)
         layer.set_name(self.name + '_' + str(self.index) + '_' + layer.__class__.__name__)
-        layer.set_shared()
         layer.set_batch_size(self.batch_size)
+        layer.set_shared()        
         print('... Layer added', self.name + '_' + str(self.index) + '_' + layer.__class__.__name__)
+
+        if is_start:
+            get_from = []  # ignore the argument and set to []
+        else:
+            assert len(get_from) != 0, 'Should have at least one "get_from" if "is_start" is False.'
 
         # set connections
         get_from_new = []
@@ -121,7 +130,7 @@ class SimpleGraph(object):
         required = find_required_layers(layer_out) + [layer_out]
         required = list(sorted(set(required)))
         required = [item for item in required if item >= layer_in]
-        print('Required Layers', required)
+        print('Required Layers', required, 'of', self.name)
         assert layer_in in required, 'Somewhere disconnected.'
 
         # check required
@@ -132,14 +141,17 @@ class SimpleGraph(object):
         # compute outputs
         intermediate = {}
         for cc in required:
+            cc_input = ()
             if cc == layer_in:
-                intermediate[cc] = self.layers[cc].get_output(*inputs_[cc])
+                cc_input += tuple(inputs_[cc])
+                # print('CC_INPUT', cc_input)
+                intermediate[cc] = self.layers[cc].get_output(*cc_input)
             else:
-                cc_input = ()
                 for dd in self.connections[cc][0]:
                     cc_input += (intermediate[dd],)
                 if cc in inputs_.keys():
                     cc_input += tuple(inputs_[cc])
+                # print('CC_INPUT2', cc_input)
                 intermediate[cc] = self.layers[cc].get_output(*cc_input)
             
         return intermediate[layer_out], required

@@ -52,11 +52,18 @@ class BaseLayer(object):
         input_: TensorVariable
             a TensorVariable to compute the output.
             name 'input' is pre-defined, so we use 'input_' instead.
+        """
+        pass  # for default, no shared
 
-        Returns
-        -------
-        TensorVariable
-            a TensorVariable computed by the layer.
+    def set_shared_by(self, params):
+        """
+        This function loads shared variable params from other layer, same class.
+        Assume the order is get_params() order.
+
+        Parameters
+        ----------
+        params: list
+            a list of shared variables.        
         """
         pass  # for default, no shared
 

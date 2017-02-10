@@ -4,10 +4,10 @@ This code includes cosine distance measurement.
 
 import theano
 import theano.tensor as T
-from lemontree.objectives import BaseObjective
+from lemontree.layers.layer import BaseLayer
 
 
-class CosineDistance(BaseObjective):
+class CosineDistance(BaseLayer):
     """
     This class implements cosine distance between embedding matrix and target vector.
     """
@@ -31,7 +31,7 @@ class CosineDistance(BaseObjective):
         self.embedding = theano.shared(embedding, 'emb')
         self.embedding.tags = ['embedding']
 
-    def get_loss(self, vector):
+    def get_output(self, vector):
         """
         This function overrides the parents' one.
         Computes the loss by model prediction and real label.

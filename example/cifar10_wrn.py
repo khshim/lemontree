@@ -66,7 +66,7 @@ x = T.ftensor4('X')
 y = T.ivector('y')
 
 graph = SimpleGraph(experiment_name, 128)
-graph.add_layer(Convolution3DLayer((3,32,32), (16,32,32), (3,3), 'half', use_bias=False), get_from=[])  # 0
+graph.add_layer(Convolution3DLayer((3,32,32), (16,32,32), (3,3), 'half', use_bias=False), is_start=True)  # 0
 graph.add_layer(BatchNormalization3DLayer((16,32,32), 0.95))                                    # 1
 graph.add_layer(ReLU())                                                                         # 2
 

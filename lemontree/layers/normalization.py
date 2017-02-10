@@ -77,6 +77,12 @@ class BatchNormalization1DLayer(BaseLayer):
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tags = ['beta', self.name]
 
+    def set_shared_by(self, params):
+        self.gamma = params[0]
+        self.beta = params[1]
+        self.bn_mean = params[2]
+        self.bn_std = params[3]
+
     def change_flag(self, new_flag):
         """
         This function change flag to change training and inference mode.
@@ -226,6 +232,12 @@ class BatchNormalization3DLayer(BaseLayer):
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tags = ['beta', self.name]
 
+    def set_shared_by(self, params):
+        self.gamma = params[0]
+        self.beta = params[1]
+        self.bn_mean = params[2]
+        self.bn_std = params[3]
+
     def change_flag(self, new_flag):
         """
         This function change flag to change training and inference mode.
@@ -325,6 +337,10 @@ class LayerNormalization1DLayer(BaseLayer):
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tags = ['beta', self.name]
 
+    def set_shared_by(self, params):
+        self.gamma = params[0]
+        self.beta = params[1]
+
     def get_output(self, input_):
         dim_mean = T.mean(input_, axis=1)
         dim_std = T.std(input_, axis=1)
@@ -349,6 +365,10 @@ class LayerNormalization3DLayer(BaseLayer):
         beta = np.zeros((self.input_shape[0],)).astype(theano.config.floatX)
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tags = ['beta', self.name]
+
+    def set_shared_by(self, params):
+        self.gamma = params[0]
+        self.beta = params[1]
 
     def get_output(self, input_):
         dim_mean = T.mean(input_, axis=[1, 2, 3])

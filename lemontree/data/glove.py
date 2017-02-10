@@ -168,7 +168,7 @@ class GloveData(object):
             a matrix of shape (words, vector dimension)
         """
         # check asserts
-        assert isinstance(indices, list), '"indices" should be a list of integers.'
+        # assert isinstance(indices, list), '"indices" should be a list of integers.'
 
         # get keys and make matrix
         words_embedding = np.zeros((len(indices), self.dimension)).astype('float32')

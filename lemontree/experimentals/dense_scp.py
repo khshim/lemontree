@@ -1,6 +1,7 @@
 """
 This code includes simple dense layer.
 Dense layer is also well known as fully-connected alyer.
+This code implements one-step dense-softmax-categorical crossentropy / Perplexity.
 """
 
 import numpy as np
@@ -8,9 +9,11 @@ import theano
 import theano.tensor as T
 from collections import OrderedDict
 from lemontree.layers.layer import BaseLayer
+from lemontree.layers.activation import Softmax
+from lemontree.objectives import CategoricalCrossentropy, WordPerplexity
 
 
-class DenseLayer(BaseLayer):
+class DenseLayerSCP(BaseLayer):
     """
     This class implements dense layer connection.
     """
@@ -31,7 +34,7 @@ class DenseLayer(BaseLayer):
         target_cpu: bool, default: False
             a bool value whether shared variable will be on cpu or gpu.
         """
-        super(DenseLayer, self).__init__()
+        super(DenseLayerSCP, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple with single value.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'
@@ -69,14 +72,7 @@ class DenseLayer(BaseLayer):
             self.b = theano.shared(b, self.name + '_bias')
         self.b.tags = ['bias', self.name]
 
-    def set_shared_by(self, params):
-        if self.use_bias:
-            self.W = params[0]
-            self.b = params[1]
-        else:
-            self.W = params[0]
-
-    def get_output(self, input_):
+    def get_output(self, input_, label):
         """
         This function overrides the parents' one.
         Creates symbolic function to compute output from an input.
@@ -96,9 +92,15 @@ class DenseLayer(BaseLayer):
         TensorVariable
         """
         if self.use_bias:
-            return T.dot(input_, self.W) + self.b
+            result = T.dot(input_, self.W) + self.b
         else:
-            return T.dot(input_, self.W)
+            result = T.dot(input_, self.W)
+
+        result = T.nnet.softmax(result)
+        cross_entropy = CategoricalCrossentropy(True).get_output(result, label)
+        perplexity = WordPerplexity().get_output(result, label)
+
+        return cross_entropy, perplexity
 
     def get_params(self):
         """
@@ -116,7 +118,7 @@ class DenseLayer(BaseLayer):
             return [self.W]
 
 
-class TimeDistributedDenseLayer(BaseLayer):
+class TimeDistributedDenseLayerSCP(BaseLayer):
     """
     This class implements time distributed dense layer connection.
     """
@@ -137,7 +139,7 @@ class TimeDistributedDenseLayer(BaseLayer):
         target_cpu: bool, default: False
             a bool value whether shared variable will be on cpu or gpu.
         """
-        super(TimeDistributedDenseLayer, self).__init__()
+        super(TimeDistributedDenseLayerSCP, self).__init__()
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple with single value.'
         assert isinstance(output_shape, tuple) and len(output_shape) == 1, '"output_shape" should be a tuple with single value.'
@@ -175,14 +177,7 @@ class TimeDistributedDenseLayer(BaseLayer):
             self.b = theano.shared(b, self.name + '_bias')
         self.b.tags = ['bias', self.name]
 
-    def set_shared_by(self, params):
-        if self.use_bias:
-            self.W = params[0]
-            self.b = params[1]
-        else:
-            self.W = params[0]
-
-    def get_output(self, input_):
+    def get_output(self, input_, label, mask=None):
         """
         This function overrides the parents' one.
         Creates symbolic function to compute output from an input.
@@ -202,18 +197,32 @@ class TimeDistributedDenseLayer(BaseLayer):
         TensorVariable
         """
         input__ = input_.dimshuffle(1,0,2)  # (sequence_length, batch_size, input_dim)
-        def step(input__):
+        label_ = label.dimshuffle(1,0)  # (sequence_length, batch_size)
+        if mask is not None:
+            m_ = mask.dimshuffle(1,0)  # (sequence_length, batch_size)
+
+        def step(input_, label):
             if self.use_bias:
-                return T.dot(input__, self.W) + self.b
+                result = T.dot(input_, self.W) + self.b
             else:
-                return T.dot(input__, self.W)
+                result = T.dot(input_, self.W)
+            result = T.nnet.softmax(result)
+            cross_entropy = T.nnet.categorical_crossentropy(T.clip(result, 1e-7, 1.0 - 1e-7), label)  # (batch_size,)
+            perplexity = -T.log2(result[T.arange(self.batch_size), label])  # (batch_size,)
+
+            return cross_entropy, perplexity
 
         output_ = theano.scan(step,
-                              sequences=[input__],
-                              outputs_info=[None])[0]
+                              sequences=[input__, label_],
+                              outputs_info=[None, None])[0]
 
-        output = output_.dimshuffle(1,0,2)  # (batch_size, sequence_length, output_dim)
-        return output
+        if mask is not None:
+            cross_entropy = T.sum(output_[0] * m_) / T.sum(m_)  # ()
+            perplexity = T.pow(2, T.sum(output_[1] * m_) / T.sum(m_))  # ()
+        else:
+            cross_entropy = T.mean(output_[0])
+            perplexity = T.pow(2, T.sum(output_[1]))
+        return cross_entropy, perplexity
 
     def get_params(self):
         """

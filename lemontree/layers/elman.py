@@ -56,7 +56,7 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
         -------
         None.
         """
-        super(ElmanRecurrentLayer, self).__init__(gradient_steps, output_return_index,
+        super(ElmanRecurrentLayer, self).__init__(gradient_steps, output_return_index, -1,
                                                   precompute, unroll, backward, name)
         # check asserts
         assert isinstance(input_shape, tuple) and len(input_shape) == 1, '"input_shape" should be a tuple with single value.'
@@ -91,6 +91,11 @@ class ElmanRecurrentLayer(BaseRecurrentLayer):
         b = np.zeros((self.output_shape,)).astype(theano.config.floatX)
         self.b = theano.shared(b, self.name + '_bias')
         self.b.tags = ['bias', self.name]
+
+    def set_shared_by(self, params):
+        self.W = params[0]
+        self.U = params[1]
+        self.b = params[2]
 
     def get_output(self, input_, mask_, hidden_init):
         """

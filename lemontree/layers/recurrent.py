@@ -10,7 +10,7 @@ class BaseRecurrentLayer(BaseLayer):
     """
     This class implements abstract base class for recurrent connection layers.
     """
-    def __init__(self, gradient_steps=-1, output_return_index=[-1],
+    def __init__(self, gradient_steps=-1, output_return_index=[-1], save_state_index=-1,
                  precompute=False, unroll=False, backward=False):
         """
         This function initializes the class.
@@ -26,6 +26,9 @@ class BaseRecurrentLayer(BaseLayer):
             a list of integers which output step should be saved.
             if [-1], only final output is returned.
             if none, return all steps through sequence.
+        save_state_index: int, default:-1
+            an integers which output step should be saved.
+            if -1, final state is saved.
         precompute: bool, default: False
             a bool value determine input precomputation.    
             for speedup, we can precompute input in return of increased memory usage.
@@ -46,6 +49,8 @@ class BaseRecurrentLayer(BaseLayer):
         assert isinstance(gradient_steps, int), '"gradient_steps" should be either positive integer or -1.'
         if output_return_index is not None:
             assert isinstance(output_return_index, list), '"output_return_index" should be a list of integer indices to return.'
+        if save_state_index is not None:
+            assert isinstance(save_state_index, int), '"save_state_index" should be an integer.'
         assert isinstance(precompute, bool), '"precompute" should be a bool value.'
         assert isinstance(backward, bool), '"backward" should be a bool value.'
         assert isinstance(unroll, bool), '"unroll" should be a bool value.'
@@ -53,6 +58,7 @@ class BaseRecurrentLayer(BaseLayer):
         # set members
         self.gradient_steps = gradient_steps
         self.output_return_index = output_return_index
+        self.save_state_index = save_state_index
         self.precompute = precompute
         self.unroll = unroll
         self.backward = backward

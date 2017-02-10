@@ -82,6 +82,13 @@ class Convolution3DLayer(BaseLayer):
         self.b = theano.shared(b, self.name + '_bias')
         self.b.tags = ['bias', self.name]
 
+    def set_shared_by(self, params):
+        if self.use_bias:
+            self.W = params[0]
+            self.b = params[1]
+        else:
+            self.W = params[0]
+
     def get_output(self, input_):
         """
         This function overrides the parents' one.

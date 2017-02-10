@@ -140,8 +140,8 @@ class BookCorpusWordCorpus(BaseDataset):
         print('Corpus length:', len(corpus))
 
         # split data to train(90%), test(5%), valid(5%)
-        train_data, test_data = split_data(corpus, int(len(corpus) * 0.95))
-        train_data, valid_data = split_data(train_data, int(len(corpus) * 0.9))
+        train_data, test_data = split_data(corpus, int(len(corpus) * 0.9))
+        train_data, valid_data = split_data(train_data, int(len(corpus) * 0.8))
 
         self.train_data = train_data
         self.test_data = test_data

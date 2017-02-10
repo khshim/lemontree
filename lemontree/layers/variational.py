@@ -53,5 +53,5 @@ class Latent1DLayer(BaseLayer):
         """
         mu = input_[:, :self.output_shape[0]]
         logvar = input_[:, self.output_shape[0]:]
-        return mu + T.sqrt(T.exp(logvar)) * self.rng.normal(logvar.shape, 0, 1)
+        return mu + T.sqrt(T.exp(logvar)) * self.rng.normal((self.batch_size, self.output_shape[0]), 0, 1)
 

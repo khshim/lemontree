@@ -38,13 +38,14 @@ class SimpleGenerator(object):
         
         # set members
         self.data_list = data_list
-        self.max_data = len(data_list)  # how many data included in input
+        self.num_data = len(data_list)  # how many data included in input
         self.name = name
         self.batch_size = batch_size
         self.rng = np.random.RandomState(seed)
 
         # all data should have same data
         self.ndata = len(data_list[0])  # first data, the number of data
+        assert self.ndata >= self.batch_size, 'The number of data should be at least "batch_size".'
         for dd in self.data_list:
             assert self.ndata == len(dd), 'All data in "data_list" should have same number of data.'
         self.order = self.rng.permutation(self.ndata)

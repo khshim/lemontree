@@ -83,6 +83,78 @@ class Pooling3DLayer(BaseLayer):
                        pad=self.padding,
                        mode=self.pool_mode)
 
+class Upscaling3DLayer(BaseLayer):
+    """
+    This class implements upscaling for 3D representation.
+    """
+    def __init__(self, input_shape, output_shape,
+                 scale_factor=(2, 2), upscale_mode='repeat'):
+        """
+        This function initializes the class.
+        Input is 4D tensor, output is 4D tensor.
+
+        Parameters
+        ----------
+        input_shape: tuple
+            a tuple of three values, i.e., (input channel, input width, input height).
+        output_shape: tuple
+            a tuple of three values, i.e., (output channel, output width, output height).
+            output width and height should be match to real convolution output.
+        scale_factor: tuple, default: (2, 2)
+            a tuple of two values multiplied to width and height.
+        pool_mode: string {'repeat', 'dialate'}, default: 'repeat'
+            a string to determine which mode theano pooling will use.
+            'max': max pooling
+            'sum': sum pooling
+            'average_inc_pad': average pooling contains padding
+            'average_exc_pad': average pooling does not contain padding
+            'half': pad input with (kernel width //2, kernel height //2) symmetrically and do 'valid'.
+                if kernel width and height is odd number, output = input
+            int: pad input with (int, int) symmetrically.
+            (int1, int2): pad input with (int1, int2) symmetrically.
+        stride: tuple, default: (1,1)
+            a tuple of two value, i.e., (stride width, stride height).
+            also known as subsample.
+        padding: tuple, default: (0, 0)
+            a tuple of two value, i.e., (padding updown, padding leftright).
+            a symmetric padding. padding first, pooling second.
+        """
+        super(Upscaling3DLayer, self).__init__()
+        # check asserts
+        assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
+        assert isinstance(output_shape, tuple) and len(output_shape) == 3, '"output_shape" should be a tuple with three values.'
+        assert isinstance(scale_factor, tuple) and len(scale_factor) == 2, '"scale_factor" should be a tuple with two values.'
+        assert scale_factor[0] > 1 and scale_factor[1] > 1, '"scale_factor" should have elements bigger than 1.'
+        assert upscale_mode in ['repeat', 'dialate'], '"upsampling mode should be a string mode.'
+
+        # set members
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.scale_factor = scale_factor
+        self.upscale_mode = upscale_mode
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Creates symbolic function to compute output from an input.
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        if self.upscale_mode == 'repeat':
+            upscaled = T.extra_ops.repeat(input_, self.scale_factor[0], 2)
+            upscaled = T.extra_ops.repeat(upscaled, self.scale_factor[1], 3)
+        else:
+            upscaled = T.zeros((input_.shape[0], input_.shape[1], \
+                input_.shape[2] * self.scale_factor[0], input_.shape[3] * self.scale_factor[1]), dtype=theano.config.floatX)
+            upscaled = T.set_subtensor(upscaled[:, :, ::self.scale_factor[0], ::self.scale_factor[1]], input_)
+
+        return upscaled
 
 class GlobalAveragePooling3DLayer(BaseLayer):
     """

@@ -50,7 +50,7 @@ x = T.fmatrix('X')
 y = T.ivector('y')
 
 graph = SimpleGraph(experiment_name, 250)
-graph.add_layer(DenseLayer((784,),(1024,), use_bias=False), get_from=[])    # 0
+graph.add_layer(DenseLayer((784,),(1024,), use_bias=False), is_start=True) # 0
 graph.add_layer(BatchNormalization1DLayer((1024,)))                         # 1
 graph.add_layer(ReLU())                                                     # 2
 for i in range(2):
