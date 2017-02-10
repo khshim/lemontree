@@ -37,8 +37,8 @@ experiment_name = 'bookcorpus_wordlm'
 
 #================Prepare data================#
 
-corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_100000')  # pickle data
-corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_100000')  # pickle data
+corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_4M')  # pickle data
+corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_4M')  # pickle data
 train_data = corpus1.train_data + corpus2.train_data
 test_data = corpus1.test_data + corpus2.test_data
 valid_data = corpus1.valid_data + corpus2.valid_data
@@ -151,7 +151,7 @@ def train_trainset():
                 train_batch_loss, train_batch_perplexity = train_func(data, mask, label, reset)
                 train_loss.append(train_batch_loss)
                 train_perplexity.append(train_batch_perplexity)
-                print('..........................', train_batch_loss, train_batch_perplexity)
+                # print('..........................', train_batch_loss, train_batch_perplexity)
             if index % 100 == 0 and index != 0:
                 current_time = time.clock()
                 print('......... minibatch index', index, 'of total index', train_gen.max_index, 'of generator', i)

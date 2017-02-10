@@ -145,8 +145,12 @@ fake_image = theano.function(inputs=[z],
 
 #================Convenient functions================#
 
-y_one_np = np.ones((batch_size,))
-y_zero_np = np.zeros((batch_size,))
+y_one_np = np.ones((batch_size, 2))
+y_one_np[:,0] = 0
+y_one_np[:,1]= 0.9
+y_zero_np = np.ones((batch_size, 2))
+y_zero_np[:,0] = 0.9
+y_zero_np[:,1] = 0
 
 def pretrain_disc():
     disc_loss = []
