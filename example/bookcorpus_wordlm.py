@@ -37,8 +37,8 @@ experiment_name = 'bookcorpus_wordlm'
 
 #================Prepare data================#
 
-corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_4M')  # pickle data
-corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_4M')  # pickle data
+corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_1M')  # pickle data
+corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_1M')  # pickle data
 train_data = corpus1.train_data + corpus2.train_data
 test_data = corpus1.test_data + corpus2.test_data
 valid_data = corpus1.valid_data + corpus2.valid_data
@@ -121,8 +121,8 @@ total_updates = merge_dicts([optimizer_updates, graph_updates])
 params_saver = SimpleParameter(total_params, experiment_name + '_params/')
 params_saver.save_params()
 
-lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.2)
-hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
+lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.1)
+hist = HistoryWithEarlyStopping(experiment_name + '_history/', 3, 3)
 hist.add_keys(['train_perplexity', 'valid_perplexity', 'test_perplexity'])
 
 #================Compile functions================#
@@ -252,7 +252,7 @@ for epoch in range(1000):
     checker = hist.check_earlystopping()
     if checker == 'save_param':
         hist.save_history_to_csv()
-        params_saver.save_params()        
+        params_saver.save_params()
         change_lr = False
         end_train = False
     elif checker == 'change_lr':
