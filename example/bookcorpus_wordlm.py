@@ -30,9 +30,9 @@ from lemontree.utils.graph_utils import get_inputs_of_variables
 from lemontree.utils.type_utils import merge_dicts
 
 np.random.seed(9999)
-base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
+# base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
 # base_datapath = 'D:/Dropbox/Project/data/'
-# base_datapath = '/home/khshim/data/'
+base_datapath = '/home/khshim/data/'
 experiment_name = 'bookcorpus_wordlm'
 
 #================Prepare data================#
