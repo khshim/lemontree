@@ -35,7 +35,7 @@ from lemontree.utils.data_utils import int_to_onehot
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
 # base_datapath = 'D:/Dropbox/Project/data/'
-# base_datapath = '/home/khshim/data/'
+base_datapath = '/home/khshim/data/'
 experiment_name = 'mnist_mlp'
 
 #================Prepare data================#
@@ -93,7 +93,7 @@ disc_loss_fake = CategoricalCrossentropy(True).get_output(fake_disc, y_zero)
 disc_acc_fake = CategoricalAccuracy().get_output(fake_disc, y_zero)
 disc_loss = disc_loss_fake + disc_loss_real
 gen_loss = CategoricalCrossentropy(True).get_output(fake_disc, y_one)
-gen_acc = CategoricalAccuracy().get_output(fake_dsic, y_one)
+gen_acc = CategoricalAccuracy().get_output(fake_disc, y_one)
 
 generator_params = generator.get_params()
 discriminator_params = discriminator.get_params()
@@ -225,7 +225,10 @@ change_lr = False
 end_train = False
 
 print('Pretrain start')
+start_time = time.clock()
 pretrain_disc()
+end_time = time.clock()
+print('......time:', end_time - start_time)
 
 for epoch in range(1000):
     #if end_train:
