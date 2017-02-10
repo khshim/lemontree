@@ -47,7 +47,7 @@ print('Train data length:', len(train_data))
 print('Test data length:', len(test_data))
 print('Valid data length:', len(valid_data))
 
-batch_size = 50
+batch_size = 100
 sequence_length = 20
 stride_length = 10
 buckets = [20,40,60,80,100]
@@ -70,6 +70,13 @@ for bb in range(len(buckets)):
     if len(valid_data[bb]) >= batch_size:
         valid_gens.append(WordLMGenerator([valid_data[bb], valid_mask[bb]], glove, \
             sequence_length, stride_length, buckets[bb], batch_size))
+
+#for i in range(len(train_gens)):
+#    train_gen = train_gens[i]
+#    for index in range(train_gen.max_index):
+#        # run minibatch
+#        for trainset in train_gen.get_minibatch(index):  # data, mask, label, reset
+#            print(i, index)
 
 #================Build graph================#
 
@@ -140,7 +147,7 @@ def train_trainset():
     train_perplexity = []
     start_time = time.clock()
     for i in range(len(train_gens)):
-        train_gen = train_gens[i]
+        train_gen = train_gens[1]
         for index in range(train_gen.max_index):
             # run minibatch
             for trainset in train_gen.get_minibatch(index):  # data, mask, label, reset

@@ -69,7 +69,7 @@ class WordLMGenerator(SimpleGenerator):
         if data_length == sequence_length:
             self.slice_per_batch = 1
         else:
-            self.slice_per_batch = (self.data_length - 1 - self.sequence_length) // self.stride_length, 0 + 1  # label is 1 shorter than data
+            self.slice_per_batch = (self.data_length - self.sequence_length) // self.stride_length + 1  # label is 1 shorter than data
     
 
     def get_minibatch(self, index):
@@ -103,8 +103,8 @@ class WordLMGenerator(SimpleGenerator):
 
         minibatch_data = np.asarray(minibatch_data, dtype='int32')
         minibatch_mask = np.asarray(minibatch_mask, dtype='int32')
-        minibatch_mask = minibatch_mask[:, 1:]  # same as label
-        minibatch_label = minibatch_data[:, 1:]
+        minibatch_mask = np.hstack([minibatch_mask[:, 1:], np.zeros((self.batch_size, 1))])  # same as label
+        minibatch_label = np.hstack([minibatch_data[:, 1:], np.zeros((self.batch_size, 1))])
 
         for j in range(self.slice_per_batch):
             minibatch_data_slices = minibatch_data[:, j * self.stride_length: j * self.stride_length + self.sequence_length]
