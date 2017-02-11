@@ -1,6 +1,5 @@
 """
-This code is an example of how to train word level language model.
-The model is LSTM(1024) - Dense(512) - Softmax.
+This code is an example of seq-2-seq style RNN autoencoder.
 We use GloVe word embeddings. (400003 vocabulary)
 """
 
@@ -32,12 +31,13 @@ np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
 # base_datapath = 'D:/Dropbox/Project/data/'
 base_datapath = '/home/khshim/data/'
-experiment_name = 'bookcorpus_wordlm'
+experiment_name = 'bookcorpus_rnnae'
+
 
 #================Prepare data================#
 
-corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_10k')  # pickle data
-corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_10k')  # pickle data
+corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_10M_5to20')  # pickle data
+corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_10M_5to20')  # pickle data
 train_data = corpus1.train_data + corpus2.train_data
 test_data = corpus1.test_data + corpus2.test_data
 valid_data = corpus1.valid_data + corpus2.valid_data
@@ -46,10 +46,10 @@ print('Train data length:', len(train_data))
 print('Test data length:', len(test_data))
 print('Valid data length:', len(valid_data))
 
-batch_size = 100
+batch_size = 5
 sequence_length = 20
-stride_length = 10
-buckets = [20,40,60,80,100]
+stride_length = 20
+buckets = [20]
 
 train_data, train_mask = sentence_bucketing(train_data, buckets)
 test_data, test_mask = sentence_bucketing(test_data, buckets)
@@ -81,31 +81,56 @@ for bb in range(len(buckets)):
 
 x = T.ftensor3('X')  # (batch_size, sequence_length, 300)
 m = T.wmatrix('M')  # (batch_size, sequence_length)
-y = T.imatrix('Y')  # (batch_size, sequence_length)
 r = T.wvector('r')  # (batch_size,)
+x_ext = T.ftensor3('X_ext')
+m_ext = T.wmatrix('M_ext')
+y_ext = T.imatrix('Y_ext')
+r_ext = T.wvector('r_ext')
 
-graph = SimpleGraph(experiment_name, batch_size)
-graph.add_layer(LSTMRecurrentLayer(input_shape=(300,),
-                                   output_shape=(1024,),
-                                   forget_bias_one=True,
-                                   peephole=True,
-                                   output_return_index=None,
-                                   save_state_index=stride_length-1,
-                                   precompute=False,
-                                   unroll=False,
-                                   backward=False), is_start=True)
-# graph.add_layer(TimeDistributedDenseLayer((1024,), (512,)))  # not much time difference, and less memory
-graph.add_layer(DenseLayer((1024,), (512,)))
-graph.add_layer(TimeDistributedDenseLayerSCP((512,), (glove.vocabulary,)))
+encoder = SimpleGraph(experiment_name + '_enc', batch_size)
+encoder.add_layer(LSTMRecurrentLayer(input_shape=(300,),
+                                     output_shape=(512,),
+                                     forget_bias_one=True,
+                                     peephole=True,
+                                     output_return_index=[-1],
+                                     save_state_index=stride_length-1,
+                                     also_return_cell=True,
+                                     precompute=False,
+                                     unroll=False,
+                                     backward=False), is_start=True)
 
-graph_output, graph_layers = graph.get_output({0:[x,m,r], -1:[y,m]}, -1, 0)
-loss = graph_output[0]
-perplexity = graph_output[1]
+encoder_output, encoder_layers = encoder.get_output({0:[x,m,r]}, -1, 0)
+encoder_output_cell = T.squeeze(encoder_output[0])
+encoder_output_hidden = T.squeeze(encoder_output[1])
 
-graph_params = graph.get_params()
-graph_updates = graph.get_updates()
+encoder_params = encoder.get_params()
+encoder_updates = encoder.get_updates()
+
+decoder = SimpleGraph(experiment_name + '_dec', batch_size)
+decoder.add_layer(LSTMRecurrentLayer(input_shape=(300,),
+                                     output_shape=(512,),
+                                     forget_bias_one=True,
+                                     peephole=True,
+                                     output_return_index=None,
+                                     save_state_index=stride_length-1,
+                                     also_return_cell=False,
+                                     precompute=False,
+                                     unroll=False,
+                                     backward=False), is_start=True)
+decoder.add_layer(TimeDistributedDenseLayerSCP((512,), (glove.vocabulary,)))
+
+decoder_output, decoder_layers = decoder.get_output({0:[x_ext,m_ext,r_ext, encoder_output_cell, encoder_output_hidden],
+                                                     -1:[y_ext,m_ext]}, -1, 0)
+loss = decoder_output[0]
+perplexity = decoder_output[1]
+
+decoder_params = decoder.get_params()
+decoder_updates = decoder.get_updates()
 
 #================Prepare arguments================#
+
+graph_params = encoder_params + decoder_params
+graph_updates = merge_dicts([encoder_updates, decoder_updates])
 
 GlorotNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_params_num(graph_params)
@@ -127,7 +152,7 @@ hist.add_keys(['train_perplexity', 'valid_perplexity', 'test_perplexity'])
 #================Compile functions================#
 
 outputs = [loss, perplexity]
-graph_inputs = [x,m,y,r]
+graph_inputs = [x,m,r,x_ext,m_ext,y_ext,r_ext]
 
 train_func = theano.function(inputs=graph_inputs,
                              outputs=outputs,
@@ -150,14 +175,29 @@ def train_trainset():
         for index in range(train_gen.max_index):
             # run minibatch
             for trainset in train_gen.get_minibatch(index):  # data, mask, label, reset
-                data = train_gen.convert_to_vector(trainset[0])
+                data_index = trainset[0]
+                data_index_ext = np.hstack([np.ones((batch_size,1),'int32') * (glove.vocabulary - 2), data_index])
+                data = train_gen.convert_to_vector(data_index)
+                data_ext = train_gen.convert_to_vector(data_index_ext)
                 mask = trainset[1]
+                mask_ext = np.hstack([np.ones((batch_size,1),'int32'), mask])
                 label = trainset[2]
+                label_ext = np.hstack([data_index, np.zeros((batch_size,1),'int32')])
                 reset = trainset[3]
-                train_batch_loss, train_batch_perplexity = train_func(data, mask, label, reset)
+                reset_ext = reset
+                #print(data_index[0], data_index.shape)
+                #print(data_index_ext[0], data_index_ext.shape)
+                #print(label[0], label.shape)
+                #print(label_ext[0], label_ext.shape)
+                #print(mask[0], mask.shape)
+                #print(mask_ext[0], mask_ext.shape)
+                #print(reset[0], reset.shape)
+                #print(reset_ext[0], reset_ext.shape)
+                train_batch_loss, train_batch_perplexity = train_func(data, mask, reset, \
+                    data_ext, mask_ext, label_ext, reset_ext)
                 train_loss.append(train_batch_loss)
                 train_perplexity.append(train_batch_perplexity)
-                # print('..........................', train_batch_loss, train_batch_perplexity)
+                print('..........................', train_batch_loss, train_batch_perplexity)
             if index % 100 == 0 and index != 0:
                 current_time = time.clock()
                 print('......... minibatch index', index, 'of total index', train_gen.max_index, 'of generator', i)

@@ -25,6 +25,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
                  gradient_steps=-1,
                  output_return_index=[-1],
                  save_state_index=-1,
+                 also_return_cell=False,
                  precompute=False, unroll=False, backward=False):
         """
         This function initializes the class.
@@ -60,6 +61,8 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         save_state_index: int, default:-1
             an integers which output step should be saved.
             if -1, final state is saved.
+        also_return_cell: bool, default: False
+            a bool value determine cell return.
         precompute: bool, default: False
             a bool value determine input precomputation.    
             for speedup, we can precompute input in return of increased memory usage.
@@ -80,6 +83,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         assert isinstance(gate_activation, BaseLayer), '"gate_activation" should be an activation layer itself.'
         assert isinstance(cell_activation, BaseLayer), '"cell_activation" should be an activation layer itself.'
         assert isinstance(out_activation, BaseLayer), '"out_activation" should be an activation layer itself.'
+        assert isinstance(also_return_cell, bool), '"also_return_cell" should be a bool value whether returning cell or not.'
         assert isinstance(forget_bias_one, bool), '"forget_bias_one" should be a bool value whether using 1 as forget bias or not.'
         assert isinstance(peephole, bool), '"peephole" should be a bool value whether using peephole connection or not.'
 
@@ -90,6 +94,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         self.cell_activation = cell_activation
         self.out_activation = out_activation
         self.forget_bias_one = forget_bias_one
+        self.also_return_cell = also_return_cell
         self.peephole = peephole
         self.updates = OrderedDict()
         
@@ -155,7 +160,7 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
             self.U = params[1]
             self.b = params[2]
 
-    def get_output(self, input_, mask_, reset_):
+    def get_output(self, input_, mask_, reset_, cell_init_=None, hidden_init_=None):
         """
         This function overrides the parents' one.
         Creates symbolic function to compute output from an input and output (hidden).
@@ -196,7 +201,11 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
         sequence_length = input_.shape[0]
 
         cell_init = self.cell_init * reset_.dimshuffle(0, 'x')
+        if cell_init_ is not None:
+            cell_init = T.switch(reset_.dimshuffle(0, 'x'), cell_init, cell_init_)
         hidden_init = self.hidden_init * reset_.dimshuffle(0, 'x')
+        if hidden_init_ is not None:
+            hidden_init = T.switch(reset_.dimshuffle(0, 'x'), hidden_init, hidden_init_)
 
         # precompute input
         if self.precompute:
@@ -282,7 +291,10 @@ class LSTMRecurrentLayer(BaseRecurrentLayer):
             cell_output_return = cell_output_return[:, ::-1]
             hidden_output_return = hidden_output_return[:, ::-1]
 
-        return hidden_output_return
+        if self.also_return_cell:
+            return cell_output_return, hidden_output_return
+        else:
+            return hidden_output_return
 
     def get_params(self):
         """

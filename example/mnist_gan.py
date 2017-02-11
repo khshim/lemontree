@@ -18,7 +18,6 @@ from lemontree.controls.scheduler import LearningRateMultiplyScheduler
 from lemontree.graphs.graph import SimpleGraph
 from lemontree.layers.activation import ReLU, Softmax, Sigmoid
 from lemontree.layers.dense import DenseLayer
-from lemontree.layers.dropout import DropoutLayer
 from lemontree.layers.convolution import Convolution3DLayer
 from lemontree.layers.pool import Upscaling3DLayer
 from lemontree.layers.shape import Flatten3DLayer, ReshapeLayer
@@ -34,9 +33,9 @@ from lemontree.utils.data_utils import int_to_onehot
 
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-base_datapath = 'D:/Dropbox/Project/data/'
-# base_datapath = '/home/khshim/data/'
-experiment_name = 'mnist_mlp'
+# base_datapath = 'D:/Dropbox/Project/data/'
+base_datapath = '/home/khshim/data/'
+experiment_name = 'mnist_gan'
 
 #================Prepare data================#
 
@@ -75,29 +74,23 @@ discriminator = SimpleGraph(experiment_name + '_disc', batch_size)
 discriminator.add_layer(Convolution3DLayer((1,28,28), (200,14,14), (5,5), 'half', (2,2)), is_start=True)
 discriminator.add_layer(BatchNormalization3DLayer((200,14,14)))
 discriminator.add_layer(ReLU(0.2))
-#discriminator.add_layer(DropoutLayer(0.25))
 discriminator.add_layer(Convolution3DLayer((200,14,14), (500,7,7), (5,5), 'half', (2,2)))
 discriminator.add_layer(BatchNormalization3DLayer((500,7,7)))
 discriminator.add_layer(ReLU(0.2))
-#discriminator.add_layer(DropoutLayer(0.25))
 discriminator.add_layer(Flatten3DLayer((500,7,7), (24500,)))
 discriminator.add_layer(DenseLayer((24500,), (256,)))
 discriminator.add_layer(BatchNormalization1DLayer((256,)))
 discriminator.add_layer(ReLU(0.2))
-#discriminator.add_layer(DropoutLayer(0.25))
 discriminator.add_layer(DenseLayer((256,), (2,)))
 discriminator.add_layer(Softmax())
 
 fake_disc, fake_disc_layers = discriminator.get_output({0:[fake]}, -1, 0)
 real_disc, real_disc_layers = discriminator.get_output({0:[x]}, -1, 0)
-# fake2_disc, fake2_disc_layers = discriminator.get_output({0:[fx]}, -1, 0)
 
 disc_loss_real = CategoricalCrossentropy(True).get_output(real_disc, y_one)
 disc_acc_real = CategoricalAccuracy().get_output(real_disc, y_one)
 disc_loss_fake = CategoricalCrossentropy(True).get_output(fake_disc, y_zero)
-# disc2_loss_fake = CategoricalCrossentropy(True).get_output(fake2_disc, y_zero)
 disc_acc_fake = CategoricalAccuracy().get_output(fake_disc, y_zero)
-# disc2_acc_fake = CategoricalAccuracy().get_output(fake2_disc, y_zero)
 disc_loss = disc_loss_fake + disc_loss_real
 gen_loss = CategoricalCrossentropy(True).get_output(fake_disc, y_one)
 gen_acc = CategoricalAccuracy().get_output(fake_disc, y_one)
@@ -112,7 +105,7 @@ print_params_num(generator_params)
 GlorotNormal().initialize_params(filter_params_by_tags(discriminator_params, ['weight']))
 print_params_num(discriminator_params)
 
-gen_optimizer = Adam(0.001)
+gen_optimizer = Adam(0.01)
 gen_optimizer_updates = gen_optimizer.get_updates(gen_loss, generator_params)
 gen_optimizer_params = gen_optimizer.get_params()
 
@@ -232,7 +225,7 @@ end_train = False
 
 print('Pretrain start')
 start_time = time.clock()
-# pretrain_disc()
+pretrain_disc()
 end_time = time.clock()
 print('......time:', end_time - start_time)
 
@@ -258,8 +251,7 @@ for epoch in range(1000):
     hist.print_history_of_epoch()
 
     if epoch % 10 == 0:
-        hist.save_history_to_csv()
-        generate_fake(epoch)
+        hist.save_history_to_csv()        
     #checker = hist.check_earlystopping()
     #if checker == 'save_param':
     #    params_saver.save_params()
