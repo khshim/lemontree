@@ -23,7 +23,7 @@ from lemontree.layers.convolution import Convolution3DLayer
 from lemontree.layers.pool import Upscaling3DLayer
 from lemontree.layers.shape import Flatten3DLayer, ReshapeLayer
 from lemontree.layers.normalization import BatchNormalization1DLayer, BatchNormalization3DLayer
-from lemontree.initializers import HeNormal
+from lemontree.initializers import HeNormal, GlorotNormal
 from lemontree.objectives import BinaryCrossentropy, CategoricalCrossentropy, CategoricalAccuracy
 from lemontree.optimizers import Adam
 from lemontree.parameters import SimpleParameter
@@ -34,8 +34,8 @@ from lemontree.utils.data_utils import int_to_onehot
 
 np.random.seed(9999)
 # base_datapath = 'C:/Users/skhu2/Dropbox/Project/data/'
-# base_datapath = 'D:/Dropbox/Project/data/'
-base_datapath = '/home/khshim/data/'
+base_datapath = 'D:/Dropbox/Project/data/'
+# base_datapath = '/home/khshim/data/'
 experiment_name = 'mnist_mlp'
 
 #================Prepare data================#
@@ -49,6 +49,7 @@ train_gen = SimpleGenerator([train_data], batch_size, 'train')
 #================Build graph================#
 
 x = T.ftensor4('X')  # (batch_size, 784)
+# fx = T.ftensor4('fX')  # (batch_size, 784)
 z = T.fmatrix('Z')  # (batch_size, 100)
 y_one = T.fmatrix('Y1')  # (batch_size, 2)
 y_zero = T.fmatrix('Y0')  # (batch_size, 2)
@@ -72,25 +73,31 @@ fake, fake_layers = generator.get_output({0:[z]}, -1, 0)
 
 discriminator = SimpleGraph(experiment_name + '_disc', batch_size)
 discriminator.add_layer(Convolution3DLayer((1,28,28), (200,14,14), (5,5), 'half', (2,2)), is_start=True)
+discriminator.add_layer(BatchNormalization3DLayer((200,14,14)))
 discriminator.add_layer(ReLU(0.2))
-discriminator.add_layer(DropoutLayer(0.25))
+#discriminator.add_layer(DropoutLayer(0.25))
 discriminator.add_layer(Convolution3DLayer((200,14,14), (500,7,7), (5,5), 'half', (2,2)))
+discriminator.add_layer(BatchNormalization3DLayer((500,7,7)))
 discriminator.add_layer(ReLU(0.2))
-discriminator.add_layer(DropoutLayer(0.25))
+#discriminator.add_layer(DropoutLayer(0.25))
 discriminator.add_layer(Flatten3DLayer((500,7,7), (24500,)))
 discriminator.add_layer(DenseLayer((24500,), (256,)))
+discriminator.add_layer(BatchNormalization1DLayer((256,)))
 discriminator.add_layer(ReLU(0.2))
-discriminator.add_layer(DropoutLayer(0.25))
+#discriminator.add_layer(DropoutLayer(0.25))
 discriminator.add_layer(DenseLayer((256,), (2,)))
 discriminator.add_layer(Softmax())
 
 fake_disc, fake_disc_layers = discriminator.get_output({0:[fake]}, -1, 0)
 real_disc, real_disc_layers = discriminator.get_output({0:[x]}, -1, 0)
+# fake2_disc, fake2_disc_layers = discriminator.get_output({0:[fx]}, -1, 0)
 
 disc_loss_real = CategoricalCrossentropy(True).get_output(real_disc, y_one)
 disc_acc_real = CategoricalAccuracy().get_output(real_disc, y_one)
 disc_loss_fake = CategoricalCrossentropy(True).get_output(fake_disc, y_zero)
+# disc2_loss_fake = CategoricalCrossentropy(True).get_output(fake2_disc, y_zero)
 disc_acc_fake = CategoricalAccuracy().get_output(fake_disc, y_zero)
+# disc2_acc_fake = CategoricalAccuracy().get_output(fake2_disc, y_zero)
 disc_loss = disc_loss_fake + disc_loss_real
 gen_loss = CategoricalCrossentropy(True).get_output(fake_disc, y_one)
 gen_acc = CategoricalAccuracy().get_output(fake_disc, y_one)
@@ -100,12 +107,12 @@ discriminator_params = discriminator.get_params()
 
 #================Prepare arguments================#
 
-HeNormal().initialize_params(filter_params_by_tags(generator_params, ['weight']))
+GlorotNormal().initialize_params(filter_params_by_tags(generator_params, ['weight']))
 print_params_num(generator_params)
-HeNormal().initialize_params(filter_params_by_tags(discriminator_params, ['weight']))
+GlorotNormal().initialize_params(filter_params_by_tags(discriminator_params, ['weight']))
 print_params_num(discriminator_params)
 
-gen_optimizer = Adam(0.0001)
+gen_optimizer = Adam(0.001)
 gen_optimizer_updates = gen_optimizer.get_updates(gen_loss, generator_params)
 gen_optimizer_params = gen_optimizer.get_params()
 
@@ -116,7 +123,7 @@ disc_optimizer_params = disc_optimizer.get_params()
 total_params = generator_params + discriminator_params + gen_optimizer_params + disc_optimizer_params
 
 params_saver = SimpleParameter(total_params, experiment_name + '_params/')
-params_saver.save_params()
+# params_saver.save_params()
 
 #lr_scheduler = LearningRateMultiplyScheduler(optimizer.lr, 0.1)
 hist = HistoryWithEarlyStopping(experiment_name + '_history/', 5, 5)
@@ -125,18 +132,15 @@ hist.add_keys(['gen_acc', 'disc_acc_real', 'disc_acc_fake'])
 
 #================Compile functions================#
 
-graph_outputs = [gen_loss, disc_loss, disc_loss_real, disc_loss_fake]
-graph_inputs = [x,z]
+disc_func = theano.function(inputs=[x, z, y_zero, y_one],
+                            outputs=[disc_loss, disc_loss_real, disc_loss_fake, disc_acc_real, disc_acc_fake],
+                            updates=disc_optimizer_updates,
+                            allow_input_downcast=True)
 
 gen_func = theano.function(inputs=[z, y_one],
                            outputs=[gen_loss, gen_acc],
                            updates=gen_optimizer_updates,
                            allow_input_downcast=True)
-
-disc_func = theano.function(inputs=[x,z, y_zero, y_one],
-                            outputs=[disc_loss, disc_loss_real, disc_loss_fake, disc_acc_real, disc_acc_fake],
-                            updates=disc_optimizer_updates,
-                            allow_input_downcast=True)
 
 fake_image = theano.function(inputs=[z],
                              outputs=fake,
@@ -147,9 +151,7 @@ fake_image = theano.function(inputs=[z],
 
 y_one_np = np.ones((batch_size, 2))
 y_one_np[:,0] = 0
-y_one_np[:,1]= 0.9
 y_zero_np = np.ones((batch_size, 2))
-y_zero_np[:,0] = 0.9
 y_zero_np[:,1] = 0
 
 def pretrain_disc():
@@ -175,6 +177,7 @@ def pretrain_disc():
     print('Pretrained disc_acc_fake', np.mean(np.asarray(disc_acc_fake)))
 
 def train_trainset():
+    generator.change_flag(1)
     gen_loss = []
     gen_acc = []
     disc_loss = []
@@ -185,11 +188,10 @@ def train_trainset():
     for index in range(train_gen.max_index):
         trainset = train_gen.get_minibatch(index)
         data = trainset[0]
-        latent1 = np.random.normal(0, 1, size=(batch_size, 100))
-        latent2 = np.random.normal(0, 1, size=(batch_size, 100))
-
-        train1_outputs = disc_func(data, latent1, y_zero_np, y_one_np)
-        train2_outputs = gen_func(latent2, y_one_np)
+        latent = np.random.normal(0, 1, size=(batch_size, 100))
+        train1_outputs = disc_func(data, latent, y_zero_np, y_one_np)
+        latent = np.random.normal(0, 1, size=(batch_size, 100))
+        train2_outputs = gen_func(latent, y_one_np)
 
         gen_loss.append(train2_outputs[0])
         gen_acc.append(train2_outputs[1])
@@ -212,7 +214,7 @@ if not os.path.exists(result_folder):
 
 def generate_fake(epoch):
     page = np.zeros((10 * 28, 10 * 28)).astype('float32')
-    latent = np.random.normal(0, 1, size=(batch_size, 100))
+    latent = np.random.normal(0, 1, size=(100, 100))
     fake = fake_image(latent)  # (100, 1, 28, 28)
     for a in range(10):
         for b in range(10):
@@ -230,7 +232,7 @@ end_train = False
 
 print('Pretrain start')
 start_time = time.clock()
-pretrain_disc()
+# pretrain_disc()
 end_time = time.clock()
 print('......time:', end_time - start_time)
 
@@ -248,6 +250,7 @@ for epoch in range(1000):
     start_time = time.clock()
 
     train_trainset()
+    generate_fake(epoch)
 
     end_time = time.clock()
     print('......time:', end_time - start_time)
@@ -273,4 +276,3 @@ for epoch in range(1000):
     #    end_train = False
     #else:
     #    raise NotImplementedError('Not supported checker type')
-

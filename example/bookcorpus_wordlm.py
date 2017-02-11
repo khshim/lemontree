@@ -37,8 +37,8 @@ experiment_name = 'bookcorpus_wordlm'
 
 #================Prepare data================#
 
-corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_1M')  # pickle data
-corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_1M')  # pickle data
+corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_10k')  # pickle data
+corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_10k')  # pickle data
 train_data = corpus1.train_data + corpus2.train_data
 test_data = corpus1.test_data + corpus2.test_data
 valid_data = corpus1.valid_data + corpus2.valid_data
@@ -183,7 +183,7 @@ def test_validset():
                 mask = validset[1]
                 label = validset[2]
                 reset = validset[3]
-                valid_batch_loss, valid_batch_perplexity = valid_func(data, mask, label, reset)
+                valid_batch_loss, valid_batch_perplexity = test_func(data, mask, label, reset)
                 valid_loss.append(valid_batch_loss)
                 valid_perplexity.append(valid_batch_perplexity)
             if index % 100 == 0 and index != 0:
