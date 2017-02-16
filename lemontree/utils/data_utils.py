@@ -56,7 +56,7 @@ def split_data(input, rule=0.9):
 
     # divide
     if rule < 1:
-        num_first = np.floor(num_input * rule)
+        num_first = np.floor(num_input * rule).astype('int32')
         num_second = num_input - num_first
         print('Splitted to:', num_first, 'and', num_second)
         first_input = input[:num_first]

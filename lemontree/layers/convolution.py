@@ -185,3 +185,122 @@ class Padding3DLayer(BaseLayer):
                    )
         return T.set_subtensor(result[indices], input)
 
+
+
+# TODO: MAKE THIS WORK!
+class TransposedConvolution3DLayer(BaseLayer):
+    """
+    This class implements the transposed convolution of 3D representation.
+    Using theano convolution backward path as forward path.
+    """
+    def __init__(self, input_shape, output_shape, kernel_shape,
+                 border_mode='valid', stride=(1, 1), use_bias=True):
+        """
+        This function initializes the class.
+        Input is 4D tensor, output is 4D tensor.
+        For efficient following batch normalization, use_bias = False.
+        
+        Parameters
+        ----------
+        input_shape: tuple
+            a tuple of three values, i.e., (input channel, input width, input height).
+        output_shape: tuple
+            a tuple of three values, i.e., (output channel, output width, output height).
+            output width and height should be match to real convolution output.
+        kernel_shape: tuple
+            a tuple of two values, i.e., (kernel width, kernel height).
+        border_mode: string {'valid', 'full', 'half', int, (int1, int2)}, default: 'valid'
+            a string to determine which mode theano convolution will use.
+            'valid': output = input + kernel - 1
+            'full': output = input - kernel + 1
+            'half': pad input with (kernel width //2, kernel height //2) symmetrically and do 'valid'.
+                if kernel width and height is odd number, output = input
+            int: pad input with (int, int) symmetrically.
+            (int1, int2): pad input with (int1, int2) symmetrically.
+        stride: tuple, default: (1,1)
+            a tuple of two value, i.e., (stride width, stride height).
+            also known as subsample.
+        use_bias: bool, default: True
+            a bool value whether we use bias or not.
+        """
+        super(TransposedConvolution3DLayer, self).__init__()
+        # check asserts
+        assert isinstance(input_shape, tuple) and len(input_shape) == 3, '"input_shape" should be a tuple with three values.'
+        assert isinstance(output_shape, tuple) and len(output_shape) == 3, '"output_shape" should be a tuple with three values.'
+        assert isinstance(kernel_shape, tuple) and len(kernel_shape) == 2, '"kernel_shape" should be a tuple with two values.'
+        assert border_mode in ['valid', 'full', 'half', 'int'] or isinstance(border_mode, int) or isinstance(border_mode, tuple), '"border_mode should be a string mode. see theano.tensor.nnet.conv2d for details.'
+        assert isinstance(stride, tuple) and len(stride) == 2, '"stride" should be a tuple with two values.'
+        assert isinstance(use_bias, bool), '"use_bias" should be a bool value.'
+        # TODO: assert given output shape is same as computed shape.
+
+        # set members
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.kernel_shape = kernel_shape
+        self.border_mode = border_mode
+        self.stride = stride
+        self.use_bias = use_bias
+
+    def set_shared(self):
+        """
+        This function overrides the parents' one.
+        Set shared variables.
+
+        Shared Variables
+        ----------------
+        W: 4D matrix
+            shape is (output channel, input channel, kernel width, kernel height).
+        b: 1D vector
+            shape is (output channel).
+        """
+        W = np.zeros((self.input_shape[0], self.output_shape[0], self.kernel_shape[0], self.kernel_shape[1])).astype(theano.config.floatX)
+        self.W = theano.shared(W, self.name + '_weight')
+        self.W.tags = ['weight', self.name]
+        b = np.zeros((self.output_shape[0])).astype(theano.config.floatX)
+        self.b = theano.shared(b, self.name + '_bias')
+        self.b.tags = ['bias', self.name]
+
+    def set_shared_by(self, params):
+        if self.use_bias:
+            self.W = params[0]
+            self.b = params[1]
+        else:
+            self.W = params[0]
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Creates symbolic function to compute output from an input.
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        op = T.nnet.abstract_conv.AbstractConv2d_gradInputs(imshp=(None, self.output_shape[0], self.output_shape[1], self.output_shape[2]),
+                                                            kshp=(self.input_shape[0], self.output_shape[0], self.kernel_shape[0], self.kernel_shape[1]),
+                                                            subsample=self.stride,
+                                                            border_mode=self.border_mode)
+        result = op(self.W, input_, (self.output_shape[1], self.output_shape[2]))
+        if self.use_bias:
+            return result + self.b.dimshuffle('x', 0, 'x', 'x')  # dimshuffle to channel dimension
+        else:
+            return result
+
+    def get_params(self):
+        """
+        This function overrides the parents' one.
+        Returns interal layer parameters.
+
+        Returns
+        -------
+        list
+            a list of shared variables used.
+        """
+        if self.use_bias:
+            return [self.W, self.b]
+        else:
+            return [self.W]

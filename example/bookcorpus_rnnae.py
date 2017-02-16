@@ -36,8 +36,8 @@ experiment_name = 'bookcorpus_rnnae'
 
 #================Prepare data================#
 
-corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_10k')  # pickle data
-corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_10k')  # pickle data
+corpus1 = BookCorpusWordCorpus(base_datapath, 'books_large_p1_500000')  # pickle data
+corpus2 = BookCorpusWordCorpus(base_datapath, 'books_large_p2_500000')  # pickle data
 train_data = corpus1.train_data + corpus2.train_data
 test_data = corpus1.test_data + corpus2.test_data
 valid_data = corpus1.valid_data + corpus2.valid_data
@@ -49,7 +49,7 @@ print('Valid data length:', len(valid_data))
 batch_size = 100
 sequence_length = 20
 stride_length = 20
-buckets = [20]
+buckets = [20, 40]
 
 train_data, train_mask = sentence_bucketing(train_data, buckets)
 test_data, test_mask = sentence_bucketing(test_data, buckets)
@@ -135,7 +135,7 @@ graph_updates = merge_dicts([encoder_updates, decoder_updates])
 GlorotNormal().initialize_params(filter_params_by_tags(graph_params, ['weight']))
 print_params_num(graph_params)
 
-optimizer = RMSprop(0.001, clipnorm=5.0)
+optimizer = RMSprop(0.0001, clipnorm=5.0)
 optimizer_updates = optimizer.get_updates(loss, graph_params)
 optimizer_params = optimizer.get_params()
 
@@ -218,15 +218,15 @@ def test_validset():
         for index in range(valid_gen.max_index):
             # run minibatch
             for validset in valid_gen.get_minibatch(index):  # data, mask, label, reset
-                data_index = trainset[0]
+                data_index = validset[0]
                 data_index_ext = np.hstack([np.ones((batch_size,1),'int32') * (glove.vocabulary - 2), data_index])
                 data = train_gen.convert_to_vector(data_index)
                 data_ext = train_gen.convert_to_vector(data_index_ext)
-                mask = trainset[1]
+                mask = validset[1]
                 mask_ext = np.hstack([np.ones((batch_size,1),'int32'), mask])
-                label = trainset[2]
+                label = validset[2]
                 label_ext = np.hstack([data_index, np.zeros((batch_size,1),'int32')])
-                reset = trainset[3]
+                reset = validset[3]
                 reset_ext = reset
                 valid_batch_loss, valid_batch_perplexity = test_func(data, mask, reset, \
                     data_ext, mask_ext, label_ext, reset_ext)
@@ -252,15 +252,15 @@ def test_testset():
         for index in range(test_gen.max_index):
             # run minibatch
             for testset in test_gen.get_minibatch(index):  # data, mask, label, reset
-                data_index = trainset[0]
+                data_index = testset[0]
                 data_index_ext = np.hstack([np.ones((batch_size,1),'int32') * (glove.vocabulary - 2), data_index])
                 data = train_gen.convert_to_vector(data_index)
                 data_ext = train_gen.convert_to_vector(data_index_ext)
-                mask = trainset[1]
+                mask = testset[1]
                 mask_ext = np.hstack([np.ones((batch_size,1),'int32'), mask])
-                label = trainset[2]
+                label = testset[2]
                 label_ext = np.hstack([data_index, np.zeros((batch_size,1),'int32')])
-                reset = trainset[3]
+                reset = testset[3]
                 reset_ext = reset
                 test_batch_loss, test_batch_perplexity = test_func(data, mask, reset, \
                     data_ext, mask_ext, label_ext, reset_ext)
