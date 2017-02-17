@@ -323,13 +323,40 @@ class BatchNormalization3DLayer(BaseLayer):
 
 
 class LayerNormalization1DLayer(BaseLayer):
-
+    """
+    This class implements layer normalization for 1D representation.
+    """
     def __init__(self, input_shape, momentum=0.99):
+        """
+        This function initializes the class.
+        Input is 2D tenor, output is 2D tensor.
+        For long term experiment, use momentum = 0.99, else, 0.9.
+        
+        Parameters
+        ----------
+        input_shape: tuple
+            a tuple of three values, i.e., (input channel, input width, input height)
+            since input shape is same to output shape, there is no output shape argument.
+        momentum: float, default: 0.99
+            a float value which will used to average inference mean and variance.
+            using exponential moving average.
+        """
         super(LayerNormalization1DLayer, self).__init__()
         self.input_shape = input_shape
         self.momentum = momentum
 
     def set_shared(self):
+        """
+        This function overrides the parents' one.
+        Set shared variables.
+
+        Shared Variables
+        ----------------
+        gamma: 1D vector
+            shape is (input channle,).
+        beta: 1D vector
+            shape is (input channel,).
+        """
         gamma = np.ones((self.input_shape[0],)).astype(theano.config.floatX)
         self.gamma = theano.shared(gamma, self.name + '_gamma')
         self.gamma.tags = ['gamma', self.name]
@@ -337,28 +364,82 @@ class LayerNormalization1DLayer(BaseLayer):
         self.beta = theano.shared(beta, self.name + '_beta')
         self.beta.tags = ['beta', self.name]
 
-    def set_shared_by(self, params):
+    def set_shared_by(self, params):        
         self.gamma = params[0]
         self.beta = params[1]
 
     def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Creates symbolic function to compute output from an input.
+        The symbolic function use theano switch function conditioned by flag.
+
+        Math Expression
+        ---------------
+        y = (x - mean(x)) / std(x)
+            mean and std through each data point.
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        Tensorvariable
+        """
         dim_mean = T.mean(input_, axis=1)
         dim_std = T.std(input_, axis=1)
         return self.gamma * (input_ - dim_mean.dimshuffle(0, 'x')) / (dim_std.dimshuffle(0, 'x') + 1e-7) + self.beta
 
     def get_params(self):
+        """
+        This function overrides the parents' one.
+        Returns interal layer parameters.
+
+        Returns
+        -------
+        list
+            a list of shared variables used.
+        """
         return [self.gamma, self.beta]
 
 
 class LayerNormalization3DLayer(BaseLayer):
-
+    """
+    This class implements layer normalization for 3D representation.
+    """
     def __init__(self, input_shape, momentum=0.99):
+        """
+        This function initializes the class.
+        Input is 4D tenor, output is 4D tensor.
+        For long term experiment, use momentum = 0.99, else, 0.9.
+        
+        Parameters
+        ----------
+        input_shape: tuple
+            a tuple of three values, i.e., (input channel, input width, input height)
+            since input shape is same to output shape, there is no output shape argument.
+        momentum: float, default: 0.99
+            a float value which will used to average inference mean and variance.
+            using exponential moving average.
+        """
         super(LayerNormalization3DLayer, self).__init__()
         self.input_shape = input_shape  # (number of maps, width of map, height of map)
         assert len(self.input_shape) == 3
         self.momentum = momentum
 
-    def set_shared(self):       
+    def set_shared(self):
+        """
+        This function overrides the parents' one.
+        Set shared variables.
+
+        Shared Variables
+        ----------------
+        gamma: 1D vector
+            shape is (input channle,).
+        beta: 1D vector
+            shape is (input channel,).
+        """    
         gamma = np.ones((self.input_shape[0],)).astype(theano.config.floatX)
         self.gamma = theano.shared(gamma, self.name + '_gamma')
         self.gamma.tags = ['gamma', self.name]
@@ -371,10 +452,37 @@ class LayerNormalization3DLayer(BaseLayer):
         self.beta = params[1]
 
     def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Creates symbolic function to compute output from an input.
+        The symbolic function use theano switch function conditioned by flag.
+
+        Math Expression
+        ---------------
+        y = (x - mean(x)) / std(x)
+            mean and std through each data point.
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        Tensorvariable         
+        """
         dim_mean = T.mean(input_, axis=[1, 2, 3])
         dim_std = T.std(input_, axis=[1, 2, 3])
         return self.gamma.dimshuffle('x', 0, 'x', 'x') * (input_ - dim_mean.dimshuffle(0, 'x', 'x', 'x')) / (dim_std.dimshuffle(0, 'x', 'x', 'x') + 1e-7) + self.beta.dimshuffle('x', 0, 'x', 'x')
 
     def get_params(self):
+        """
+        This function overrides the parents' one.
+        Returns interal layer parameters.
+
+        Returns
+        -------
+        list
+            a list of shared variables used.
+        """
         return [self.gamma, self.beta]
 

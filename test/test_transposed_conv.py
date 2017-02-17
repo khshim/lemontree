@@ -8,7 +8,7 @@ from lemontree.layers.convolution import TransposedConvolution3DLayer
 # test convolution
 
 x = T.ftensor4('X')
-trans = TransposedConvolution3DLayer((1,6,6), (1,16,16), (5,5), 'half', (2,2))
+trans = TransposedConvolution3DLayer((1,6,6), (1,8,8), (5,5), 'half', (2,2))
 trans.set_name('test_trans')
 trans.set_shared()
 trans.set_batch_size(1)

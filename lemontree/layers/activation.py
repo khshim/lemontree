@@ -395,3 +395,51 @@ class GumbelSoftmax(BaseLayer):
         uniform_random = self.rng.uniform((self.batch_size, self.input_shape[0]), 0, 1)
         gumbel_random = -T.log(-T.log(uniform_random + 1e-7) + 1e-7)
         return T.nnet.softmax((input_ + gumbel_random) / self.temperature)  # divide by temperature
+
+
+class Maxout(BaseLayer):
+    """
+    This class implements maxout activation.
+    See "Maxout Networks".
+    (Ian Goodfellow et al., 2013.)
+    """
+    def __init__(self, input_shape, output_shape, num_pool=2):
+        """
+        This function initializes the class.
+
+        Parameters
+        ----------
+        input_shape: tuple
+            a tuple of shape (batch_size, input_dim) or (batch_size, num_channel, width, height).
+        output_shape: tuple
+            a tuple of shape (batch_size, output_dim) or (batch_Size, num_channel, width, height).
+        num_pool: int
+            an integer which indicates how many outputs will be merged to one.
+        """
+        # check asserts
+        assert isinstance(num_pool, int) and num_pool > 1, '"num_pool" should be a positive integer bigger than 1.'
+        assert isinstance(input_shape, tuple), '"input_shape" should be a tuple.'
+        assert isinstance(output_shape, tuple), '"output_shape" shoule be a tuple.'
+        assert len(input_shape) == len(output_shape), 'Two shape should be equal.'
+        assert input_shape[0] % num_pool == 0, '"num_pool" should divide dimension or channel.'
+        assert input_shape[0] == num_pool * output_shape[0]
+
+        # set members
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.num_pool = num_pool
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Maxout returns maximum value through dimension or channel.
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.max([input_[:, n::self.num_pool] for n in range(self.num_pool)], axis=0)
