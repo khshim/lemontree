@@ -218,6 +218,36 @@ class HardSigmoid(BaseLayer):
         return T.nnet.hard_sigmoid(input_)
 
 
+class Softplus(BaseLayer):
+    """
+    This class implements Softplus activation function.
+    """
+    def __init__(self):
+        """
+        This function initializes the class.
+        """
+        super(Softplus, self).__init__()
+
+    def get_output(self, input_):
+        """
+        This function overrides the parents' one.
+        Softplus is element-wise operation.
+
+        Math Expression
+        -------------------
+        y = ln(1 + exp(x))
+
+        Parameters
+        ----------
+        input_: TensorVariable
+
+        Returns
+        -------
+        TensorVariable
+        """
+        return T.nnet.softplus(input_)
+
+
 class Softmax(BaseLayer):
     """
     This class implements softmax activation function.
